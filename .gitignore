@@ -1,0 +1,12 @@
+# data/raw se excluye (archivos crudos pesados, re-descargables vía acquisition.py)
+data/raw/*
+!data/raw/.gitkeep
+
+# data/processed y data/outputs SÍ se comprometen al repo (requerido en entregables)
+# Si pesan demasiado, usar Git LFS en vez de excluirlos aquí.
+
+*.pbf
+__pycache__/
+*.pyc
+.venv/
+.DS_Store

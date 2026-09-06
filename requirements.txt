@@ -1,0 +1,12 @@
+geopandas
+shapely
+pyogrio
+pyrosm
+osmnx
+networkx
+pandas
+pyyaml
+chardet
+requests
+streamlit
+matplotlib
