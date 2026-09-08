@@ -1,6 +1,12 @@
 # data/raw se excluye (archivos crudos pesados, re-descargables vía acquisition.py)
+# Excepciones: el log de descargas (documenta fecha/origen de cada fuente,
+# es un entregable) y cualquier fuente cacheada manualmente porque su
+# portal no estaba disponible (ver README) -- esa se agrega con
+# `git add -f data/raw/<archivo>` a propósito, para no versionar por
+# accidente descargas de rutina que sí se pueden repetir con acquisition.py.
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/download_log.json
 
 # data/processed y data/outputs SÍ se comprometen al repo (requerido en entregables)
 # Si pesan demasiado, usar Git LFS en vez de excluirlos aquí.

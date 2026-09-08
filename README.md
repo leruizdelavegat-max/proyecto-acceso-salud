@@ -50,3 +50,32 @@ streamlit run app.py
 - SIGMED/MINEDU: https://sigmed.minedu.gob.pe/descargas/
 - Red vial OSM Perú: https://download.geofabrik.de/south-america/peru-latest.osm.pbf
 - Límites administrativos: [DECLARAR FUENTE — ver config.md]
+
+## Estado de la Fase 1 (adquisición y validación)
+
+`_data/` (provisto para el curso) contiene una copia de las 4 fuentes:
+`RENIPRESS_30-04-2026.csv`, `CP_P.shp` (centros poblados), `DEPARTAMENTO.gpkg`
+/ `PROVINCIA.gpkg` / `DISTRITO.gpkg` (límites INEI) y `peru-260907.osm.pbf`.
+`_data/` nunca se modifica: `config.md` declara cada uno como `cache_local`
+de su fuente correspondiente, y `acquisition.py` copia de ahí a `data/raw/`
+(la ruta que de verdad lee `validation.py`) la primera vez que se corre.
+Si mañana falta un archivo en `_data/` o quieres forzar la descarga real,
+`acquisition.py` cae automáticamente a:
+
+- **RENIPRESS**: busca en la página del dataset el CSV mensual más reciente
+  (`RENIPRESS_DD-MM-AAAA.csv`) y lo descarga. Nota: `datosabiertos.gob.pe`
+  bloquea (HTTP 418) clientes sin user-agent de navegador — el script ya
+  envía uno (ver `config.md:descargas.user_agent`).
+- **SIGMED** y **límites administrativos**: son portales interactivos sin
+  enlace de descarga directa conocido; si no hay `cache_local` ni archivo ya
+  en `data/raw/`, el script imprime instrucciones de descarga manual en vez
+  de fallar en silencio.
+- **OSM Perú**: descarga directa desde Geofabrik.
+
+Mientras no exista la capa de distrito en `data/raw/limites_distrito.gpkg`,
+la regla de "puntos fuera de su polígono distrital" queda documentada como
+"no evaluado" en el informe de calidad — nunca se omite en silencio.
+
+El informe de calidad de datos (cuántos registros marcó cada regla, qué se
+hizo y por qué) se genera en `logs/reporte_calidad_datos.md` / `.json` cada
+vez que corres `validation.py`.
