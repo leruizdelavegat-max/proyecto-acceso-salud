@@ -1,6 +1,7 @@
 # config.md
 # Configuración central del proyecto "La hora dorada"
-# Todo el código debe leer de aquí — nada de valores hardcodeados en src/
+# Todo el código (notebooks y src/) debe leer de aquí — nada de valores
+# hardcodeados en una celda o script.
 # EDITA los valores marcados con "# <-- EDITAR" según tu selección final.
 
 departamentos:

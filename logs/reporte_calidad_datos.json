@@ -1,6 +1,6 @@
 {
   "dataset": "renipress_y_centros_poblados",
-  "generado": "2026-09-08T14:49:53+00:00",
+  "generado": "2026-09-08T15:51:23+00:00",
   "reglas": [
     {
       "regla": "codificacion_archivo",
@@ -14,7 +14,7 @@
       "registros_marcados": 4,
       "porcentaje": null,
       "accion": "corregido",
-      "motivo": "reemplazo de mojibake conocido (ÿ->ñ, Ÿ->Ñ) y reversión de doble codificación UTF-8/Latin-1 en campos de texto"
+      "motivo": "reemplazo de mojibake conocido (ÿ->ñ, Ÿ->Ñ) y reversión de doble codificación UTF-8/Latin-1"
     },
     {
       "regla": "coordenadas_faltantes_o_nulas",
@@ -28,7 +28,7 @@
       "registros_marcados": 7,
       "porcentaje": 0.02,
       "accion": "eliminado",
-      "motivo": "|valor| < 1e-06 se trata como centinela de nulo, no como coordenada real"
+      "motivo": "|valor| < 1e-06 se trata como centinela de nulo, no coordenada real"
     },
     {
       "regla": "coordenadas_lat_lon_intercambiadas",
@@ -84,7 +84,7 @@
       "registros_marcados": 0,
       "porcentaje": null,
       "accion": "sin problemas detectados",
-      "motivo": "reemplazo de mojibake conocido (ÿ->ñ, Ÿ->Ñ) y reversión de doble codificación UTF-8/Latin-1 en campos de texto"
+      "motivo": "reemplazo de mojibake conocido (ÿ->ñ, Ÿ->Ñ) y reversión de doble codificación UTF-8/Latin-1"
     },
     {
       "regla": "coordenadas_fuera_de_peru",

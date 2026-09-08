@@ -10,3 +10,5 @@ chardet
 requests
 streamlit
 matplotlib
+jupyterlab
+ipykernel
