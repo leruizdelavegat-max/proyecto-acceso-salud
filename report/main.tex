@@ -277,10 +277,11 @@ Lo revierto.
 \inputsihay{tables/calidad_datos.tex}
 
 \subsection{C\'omo calcul\'e los tiempos de viaje}
-Constru\'i un grafo de la red vial directamente desde el archivo local de
-OpenStreetMap (\texttt{peru-latest.osm.pbf}) con la librer\'ia
-\texttt{pyosmium}, y calcul\'e los caminos m\'as cortos con Dijkstra
-vectorizado (\texttt{scipy.sparse.csgraph}).
+Le\'i la red vial directamente del archivo local de OpenStreetMap
+(\texttt{peru-latest.osm.pbf}) con \texttt{pyosmium} y la arm\'e como un grafo
+de \texttt{NetworkX}: cada cruce es un nodo y cada tramo de calle, una arista
+con su longitud. Sobre ese grafo calcul\'e, para cada centro poblado, el
+tiempo al establecimiento resolutivo m\'as cercano.
 
 \textbf{Decisi\'on 1: no us\'e OSRM en Docker}, que era la opci\'on
 sugerida. La BIOS del equipo tiene la virtualizaci\'on deshabilitada y
@@ -289,9 +290,20 @@ bloqueada por el \'area de sistemas, as\'i que Docker y WSL2 no arrancan.
 el \texttt{.pbf}) porque no compila en la versi\'on de Python del equipo.
 \textbf{Decisi\'on 3: descart\'e OSMnx / Overpass} porque el servidor
 p\'ublico estuvo inalcanzable los d\'ias de trabajo ---lo cual es, en s\'i,
-un dato sobre el estado de las herramientas de datos abiertos. La soluci\'on
-final ---leer el \texttt{.pbf} local--- no depende de internet ni de
+un dato sobre el estado de las herramientas de datos abiertos. Leer el
+\texttt{.pbf} local con \texttt{pyosmium} no depende de internet ni de
 permisos de administrador, y es completamente reproducible.
+
+\textbf{Decisi\'on 4: el grafo es de \texttt{NetworkX}, pero el camino m\'as
+corto lo resuelve \rc{scipy.sparse.csgraph}}, no la funci\'on de Dijkstra
+de \texttt{NetworkX}. Es el mismo algoritmo, sobre el mismo grafo y con los
+mismos pesos ---el resultado es id\'entico---, solo que \texttt{SciPy} opera
+de forma vectorizada sobre la matriz de adyacencia y resuelve de una sola vez
+todos los or\'igenes contra todos los destinos. Con la implementaci\'on de
+\texttt{NetworkX}, solo la matriz de Piura tardaba unos 47 minutos; con
+\texttt{SciPy}, unos 2 segundos. Por eso el grafo, los pesos y el enganche de
+los puntos a la red son de \texttt{NetworkX}, y solo el solver final es de
+\texttt{SciPy}.
 
 Par\'ametros: tres perfiles ---auto (velocidad seg\'un el tipo de v\'ia, y
 la se\~nalizada cuando existe), bicicleta (15\,km/h) y a pie (4{,}5\,km/h).
