@@ -179,6 +179,27 @@ def run() -> dict:
     _tex(gini.round(3), "gini", "Coeficiente de Gini del tiempo de acceso ponderado por población.",
          "tab:gini")
 
+    # contraste urbano/rural
+    try:
+        ur = pd.read_csv(out / "contraste_urbano_rural.csv")
+        _tex(ur.round(1), "urbano_rural",
+             "Acceso y cobertura por clasificación urbano/rural (regla INEI) y departamento.",
+             "tab:urbano-rural")
+    except Exception:
+        pass
+
+    # informe de calidad de datos de la Fase 1
+    try:
+        q = pd.read_csv(_p("logs/quality_report.csv"))
+        qs = q[["dataset", "regla", "registros_marcados", "porcentaje", "accion"]].copy()
+        qs["regla"] = qs["regla"].str.replace("_", " ", regex=False)
+        qs["dataset"] = qs["dataset"].str.replace("_", " ", regex=False)
+        _tex(qs, "calidad_datos",
+             "Informe de calidad de datos de la Fase 1: registros marcados por regla.",
+             "tab:calidad")
+    except Exception as e:
+        print(f"  (tabla calidad_datos omitida: {e})")
+
     # ---- Números para el texto ----
     pob_tot = base["poblacion"].sum()
     pob_cub = base.loc[base["t_min"] <= umbral, "poblacion"].sum()

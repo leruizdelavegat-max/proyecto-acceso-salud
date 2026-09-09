@@ -1,0 +1,25 @@
+\begin{table}
+\caption{Informe de calidad de datos de la Fase 1: registros marcados por regla.}
+\label{tab:calidad}
+\begin{tabular}{lrrrr}
+\toprule
+dataset & regla & registros\_marcados & porcentaje & accion \\
+\midrule
+renipress & encoding archivo & 0 & 0.0 & leído como utf-8-sig \\
+renipress & encoding texto utf8 vs latin1 & 4 & 0.0 & corregido \\
+renipress & coordenadas vacias o no numericas & 13147 & 37.1 & eliminado \\
+renipress & coordenadas en cero & 7 & 0.0 & eliminado \\
+renipress & signo de hemisferio invertido & 0 & 0.0 & corregido \\
+renipress & coordenadas lat lon intercambiadas & 0 & 0.0 & corregido \\
+renipress & coordenadas fuera de peru & 0 & 0.0 & eliminado \\
+renipress & codigos duplicados & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
+renipress & categoria no reconocida & 2988 & 13.4 & conservado con advertencia \\
+centros poblados & geometria vacia & 0 & 0.0 & eliminado \\
+centros poblados & coordenadas fuera de peru & 0 & 0.0 & eliminado \\
+centros poblados & encoding texto utf8 vs latin1 & 0 & 0.0 & sin problemas \\
+centros poblados & codigos duplicados & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
+renipress & punto fuera de su poligono distrital & 1683 & 7.5 & conservado con advertencia \\
+centros poblados & punto fuera de su poligono distrital & 811 & 0.5 & conservado con advertencia \\
+\bottomrule
+\end{tabular}
+\end{table}

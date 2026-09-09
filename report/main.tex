@@ -133,7 +133,7 @@ vacio / ``0'' / ``S/C'' $\to$ desconocida) esta a la vista en
 
 \subsection{Capa de validacion}
 Cada regla registra cuantos registros marco, que se hizo y por que
-(\texttt{logs/quality\_report.csv}). Se detectan y tratan: coordenadas
+(Tabla~\ref{tab:calidad}). Se detectan y tratan: coordenadas
 faltantes / nulas o en cero (eliminadas), \textbf{signo de hemisferio
 invertido} (corregido si el valor negativo cae en el \emph{bounding box}
 del Peru), \textbf{intercambio lat/lon} (corregido si
@@ -143,7 +143,11 @@ fuera del \emph{bounding box} del Peru (eliminadas), codigos duplicados
 (conservados con advertencia, volcados a un CSV) y problemas de codificacion
 UTF-8 / latin-1 (mojibake revertido). Eliminar filas en silencio se
 considero un enfoque fallido; toda eliminacion tiene una regla justificada
-y registrada.
+y registrada. La regla de \emph{recuperacion} (corregir en vez de eliminar)
+se aplico al signo de hemisferio, al intercambio lat/lon y al mojibake;
+las demas son eliminaciones justificadas.
+
+\inputsihay{tables/calidad_datos.tex}
 
 \subsection{Ruteo}
 Se construye un grafo \textbf{NetworkX} a partir del \texttt{.pbf} local con
@@ -210,6 +214,8 @@ altitudinal. Correlacion de Spearman entre $t_{\min}$ y altitud:
 \spearmanAltitud.}
 
 \inputsihay{tables/brechas_criticas.tex}
+
+\inputsihay{tables/urbano_rural.tex}
 
 \section{Discusion}
 

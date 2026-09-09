@@ -1,0 +1,7 @@
+﻿profile,tipo,n_puntos,n_snap_fallido,snap_dist_media_m,snap_dist_p95_m,snap_dist_max_m
+bike,demanda,5000,1632,5371.4,8237.1,382491.8
+bike,oferta,505,11,1152.8,79.7,349035.0
+car,demanda,5000,1820,5563.7,9767.8,382563.2
+car,oferta,505,11,1156.6,87.3,349094.7
+foot,demanda,5000,1631,5369.9,8237.1,382491.8
+foot,oferta,505,11,1148.7,75.1,349035.0
