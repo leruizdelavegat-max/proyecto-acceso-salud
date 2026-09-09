@@ -275,16 +275,21 @@ def _guardar_cache(df_nuevo: pd.DataFrame, path: Path,
 _CACHE_VIAS: dict = {}          # pbf_path -> lista de (coords, hw, maxspeed, oneway, junction)
 
 
-def _leer_vias_pbf(pbf_path: Path) -> list:
-    """Lee, en una sola pasada, todas las vías `highway` de Perú con las
-    coordenadas de sus nodos ya resueltas. Usa un índice de localizaciones
-    respaldado en disco (`sparse_file_array`) para no cargar en RAM las
-    coordenadas de los ~30 M de nodos del país."""
-    key = str(pbf_path)
+def _leer_vias_pbf(pbf_path: Path, bbox: tuple | None = None) -> list:
+    """Lee, en una sola pasada, las vías `highway` del `.pbf` con las
+    coordenadas de sus nodos ya resueltas. Con `bbox` (minx,miny,maxx,maxy)
+    solo conserva las que tienen algún vértice dentro (+ margen) — así el
+    caché de vías queda chico y no se llena la RAM con toda la red de Perú.
+    Usa un índice de nodos respaldado en disco (`sparse_file_array`)."""
+    br = tuple(round(c, 2) for c in bbox) if bbox else None
+    key = (str(pbf_path), br)
     if key in _CACHE_VIAS:
         return _CACHE_VIAS[key]
     import osmium
     HW_TODOS = _HW_CAR | _HW_BIKE | _HW_FOOT
+    if bbox is not None:
+        m = 0.3  # ~33 km de margen para no cortar vías que entran/salen del bbox
+        minx, miny, maxx, maxy = bbox[0] - m, bbox[1] - m, bbox[2] + m, bbox[3] + m
     idx_path = _ruta("data/interim") / "nodecache.bin"
     idx_path.parent.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
@@ -304,6 +309,9 @@ def _leer_vias_pbf(pbf_path: Path) -> list:
                 return
             if len(coords) < 2:
                 return
+            if bbox is not None and not any(minx <= x <= maxx and miny <= y <= maxy
+                                            for x, y in coords):
+                return
             self.vias.append((coords, hw, w.tags.get("maxspeed"),
                               w.tags.get("oneway"), w.tags.get("junction")))
 
@@ -314,7 +322,7 @@ def _leer_vias_pbf(pbf_path: Path) -> list:
         idx_path.unlink()
     except OSError:
         pass
-    log.info("  pbf: %d vías highway de Perú con coordenadas (%.0fs, cacheado en memoria)",
+    log.info("  pbf: %d vías highway con coordenadas (%.0fs, cacheado en memoria)",
              len(v.vias), time.time() - t0)
     _CACHE_VIAS[key] = v.vias
     return v.vias
@@ -401,7 +409,7 @@ def _grafo_desde_pbf(pbf_path: Path, bbox: tuple, perfil: str, rcfg: dict):
     respeta_oneway = (perfil == "car")
     minx, miny, maxx, maxy = bbox
     t0 = time.time()
-    vias = _leer_vias_pbf(pbf_path)
+    vias = _leer_vias_pbf(pbf_path, bbox)
 
     def _nid(x, y):
         return (round(x, 7), round(y, 7))
@@ -442,39 +450,43 @@ def _grafo_desde_pbf(pbf_path: Path, bbox: tuple, perfil: str, rcfg: dict):
 def _simplificar_grafo(G) -> None:
     """Colapsa in-place las cadenas de nodos de grado 2 (puntos-forma de una
     vía, no cruces): u—v—w con `v` intersticial se vuelve u—w con la longitud
-    sumada. Reduce el grafo ~5-10x y acelera Dijkstra. Repite hasta punto fijo."""
-    cambiado = True
-    while cambiado:
-        cambiado = False
-        for v in list(G.nodes):
-            if v not in G:
-                continue
-            vecinos = (set(G.predecessors(v)) | set(G.successors(v)))
-            vecinos.discard(v)
-            if len(vecinos) != 2:
-                continue
-            u, w = tuple(vecinos)
+    sumada. Reduce el grafo ~10-20x y acelera Dijkstra.
 
-            def _e(frm, to):
-                dd = G.get_edge_data(frm, to)
-                return next(iter(dd.values())) if dd else None
+    Cola de trabajo (una pasada + re-encolado de los extremos afectados), no
+    barridos repetidos sobre todos los nodos — así escala a redes densas."""
+    from collections import deque
 
-            uv, vw, wv, vu = _e(u, v), _e(v, w), _e(w, v), _e(v, u)
-            # aristas incidentes a v que NO van a u/w -> no es un simple pasa-por
-            inc = set(G.predecessors(v)) | set(G.successors(v))
-            if inc - {u, w}:
-                continue
-            nuevas = []
-            if uv and vw:
-                nuevas.append((u, w, uv["length"] + vw["length"], uv.get("highway"), uv.get("maxspeed")))
-            if wv and vu:
-                nuevas.append((w, u, wv["length"] + vu["length"], wv.get("highway"), wv.get("maxspeed")))
-            if not nuevas:
-                continue
-            G.remove_node(v)
-            for frm, to, L, hw, ms in nuevas:
-                G.add_edge(frm, to, length=float(L), highway=hw, maxspeed=ms)
-            cambiado = True
+    def _e(frm, to):
+        dd = G.get_edge_data(frm, to)
+        return next(iter(dd.values())) if dd else None
+
+    cola = deque(G.nodes)
+    en_cola = set(cola)
+    while cola:
+        v = cola.popleft()
+        en_cola.discard(v)
+        if v not in G:
+            continue
+        vecinos = set(G.predecessors(v)) | set(G.successors(v))
+        vecinos.discard(v)
+        if len(vecinos) != 2:
+            continue
+        u, w = tuple(vecinos)
+        uv, vw, wv, vu = _e(u, v), _e(v, w), _e(w, v), _e(v, u)
+        nuevas = []
+        if uv and vw:
+            nuevas.append((u, w, uv["length"] + vw["length"], uv.get("highway"), uv.get("maxspeed")))
+        if wv and vu:
+            nuevas.append((w, u, wv["length"] + vu["length"], wv.get("highway"), wv.get("maxspeed")))
+        if not nuevas:
+            continue
+        G.remove_node(v)
+        for frm, to, L, hw, ms in nuevas:
+            G.add_edge(frm, to, length=float(L), highway=hw, maxspeed=ms)
+        for x in (u, w):
+            if x in G and x not in en_cola:
+                cola.append(x)
+                en_cola.add(x)
 
 
 def construir_o_cargar_grafo(cfg: dict, nombre_depto: str, perfil: str,
@@ -711,13 +723,10 @@ def run(cfg: dict, departamentos: list[str] | None = None,
     ruta_muestra.parent.mkdir(parents=True, exist_ok=True)
     muestra.to_file(ruta_muestra, driver="GPKG")
 
-    # bbox combinado de los 3 deptos (demanda muestreada + toda la oferta):
-    # el .pbf se escanea así una sola vez para las coordenadas.
-    buffer_km = float(rcfg["grafo"].get("buffer_km", 30))
-    bbox_ambito = tuple(area_de_interes(
-        [muestra] + list(ofertas.values()), buffer_km).bounds)
-    log.info("  área de interés (bbox EPSG:4326): %s", tuple(round(c, 3) for c in bbox_ambito))
-
+    # bbox POR DEPARTAMENTO (no combinado: los 3 deptos están lejos entre sí y
+    # su bbox conjunto abarcaría medio Perú). Las vías del .pbf se leen igual
+    # una sola vez y quedan en memoria; cada grafo departamental se arma
+    # filtrando esas vías a su propio bbox.
     cache_matriz = _ruta(rutas["cache_matriz"])
     matrices, snaps = [], []
     for dep in nombres:
@@ -729,8 +738,7 @@ def run(cfg: dict, departamentos: list[str] | None = None,
                  dep_up, len(m_dep), len(of_dep), int(of_dep["resolutiva"].sum()))
         for perfil in perfiles:
             try:
-                mtx, snp = matriz_departamento(cfg, dep, perfil, m_dep, of_dep, forzar,
-                                               bbox=bbox_ambito)
+                mtx, snp = matriz_departamento(cfg, dep, perfil, m_dep, of_dep, forzar)
                 matrices.append(mtx)
                 snaps.append(snp)
                 # se cachean TODOS los pares, incl. los sin ruta (duration/distance

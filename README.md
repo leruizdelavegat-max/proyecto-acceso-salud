@@ -41,8 +41,9 @@ repo y todas sus rutas son relativas a ella. Las fases siguientes siguen
 siendo scripts en `src/`:
 
 ```bash
-python src/metrics.py         # Fase 3: calcula métricas de acceso por departamento
-python src/export.py          # Genera tablas y figuras para el informe
+python src/poblacion.py       # Fase 3 (insumo): población por centro poblado (WorldPop)
+python src/metrics.py         # Fase 3: métricas de acceso -> data/outputs/*.csv + report/tables/*.tex
+python src/export.py          # Genera figuras para el informe
 ```
 
 ## Cómo correr la Fase 2 (ruteo — pyosmium + NetworkX)
@@ -115,6 +116,36 @@ Pruebas de las funciones puras (no necesitan red):
 ```bash
 pytest -q tests/test_routing.py
 ```
+
+## Cómo correr la Fase 3 (métricas)
+
+```bash
+python src/poblacion.py    # descarga WorldPop 1 km y estima población por centro poblado
+python src/metrics.py      # calcula todas las métricas
+pytest -q tests/test_metrics.py
+```
+
+**Población**: SIGMED no trae población. `src/poblacion.py` la estima del
+raster **WorldPop 2020, 1 km, UN-ajustado** (no *constrained*), asignando
+cada celda al centro poblado más cercano *dentro del polígono de su
+departamento* — así el total por departamento coincide con el censo
+(Piura ≈ 1.86 M, Ayacucho ≈ 0.74 M, Ucayali ≈ 0.57 M). Sale a
+`data/processed/centros_poblados_poblacion.parquet`.
+
+`src/metrics.py` produce (cada métrica = función DataFrame→DataFrame, sin
+lógica en el dashboard):
+
+| Salida (`data/outputs/`) | Contenido |
+|---|---|
+| `metricas_por_centro_poblado.csv` | `t_min(i)`, distancia, banda, población, urbano/rural, altitud por centro poblado |
+| `cobertura_bandas.csv` / `..._por_departamento.csv` | % de población a <30 / 30-60 / 60-120 / >120 min y sin ruta |
+| `acceso_ponderado_{distrito,provincia,departamento}.csv` | acceso medio **ponderado por población** por nivel |
+| `brechas_criticas_distritos.csv` | distritos con peor acceso ponderado, rankeados |
+| `desigualdad_gini.csv` + `curva_lorenz.csv` | Gini y curva de Lorenz del acceso ponderado |
+| `contraste_urbano_rural.csv` | acceso y cobertura urbano vs rural (regla INEI: ≥2000 hab. o capital) |
+| `cross_acceso_altitud.csv` | cross-análisis acceso × altitud (correlacional, no causal) |
+
+Tablas LaTeX en `report/tables/*.tex` (generadas, no escritas a mano).
 
 ## Cómo correr el dashboard
 

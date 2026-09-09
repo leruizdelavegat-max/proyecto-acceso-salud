@@ -21,8 +21,9 @@ scipy
 pyarrow
 osmnx>=2.0   # opcional: solo si se cambia routing.grafo.fuente a osmnx_overpass
 
-# --- Fase 3: métricas ---
-# (usa pandas/geopandas/numpy ya listados)
+# --- Fase 3: métricas + población ---
+# `rasterio` lee el raster WorldPop (población por centro poblado, src/poblacion.py).
+rasterio
 
 # --- Fase 4: dashboard ---
 streamlit

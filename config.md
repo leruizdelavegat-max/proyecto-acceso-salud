@@ -165,5 +165,19 @@ routing:
     demanda_muestreada: "data/processed/demanda_muestreada.gpkg"
     log_ejecucion: "logs/routing_run.log"
 
+metrics:
+  # Fase 3. Bandas de cobertura (minutos): <30 / 30-60 / 60-120 / >120.
+  bandas_minutos: [30, 60, 120]
+  n_brechas: 20                    # cuántos distritos lista "brechas críticas"
+  # Regla urbano/rural (INEI): urbano si >= 2000 hab. O es capital distrital.
+  umbral_urbano_habitantes: 2000
+  # Población por centro poblado: SIGMED no la trae. Se estima del raster
+  # WorldPop 1 km UN-ajustado (no constrained), asignando cada celda al centro
+  # poblado más cercano dentro del polígono de su departamento (el total por
+  # departamento coincide con el censo). Fuente a citar:
+  #   WorldPop 2020, Peru, UN-adjusted. DOI:10.5258/SOTON/WP00685
+  raster_poblacion: "data/raw/peru_worldpop_2020_1km.tif"
+  archivo_poblacion: "data/processed/centros_poblados_poblacion.parquet"
+
 estado_operativo_valido:
   - "ACTIVO"
