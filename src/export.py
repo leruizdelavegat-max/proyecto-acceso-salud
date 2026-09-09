@@ -218,6 +218,14 @@ def run() -> dict:
         "peorDistrito": str(brechas.iloc[0]["nombre_distrito"]) if len(brechas) else "--",
         "fraccionMuestra": "29",
     })
+    try:
+        q = pd.read_csv(_p("logs/quality_report.csv"))
+        rec = q[q["regla"] == "coordenadas_recuperadas_por_ubigeo"].iloc[0]
+        macros["coordRecuperadas"] = f"{int(rec['registros_marcados']):,}".replace(",", "\\,")
+        macros["coordFaltantes"] = f"{int(rec['registros_evaluados']):,}".replace(",", "\\,")
+        macros["tasaRecuperacion"] = f"{100*int(rec['registros_marcados'])/max(int(rec['registros_evaluados']),1):.1f}"
+    except Exception:
+        pass
     tex = "\n".join(f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in macros.items()) + "\n"
     _p("report/tables").mkdir(parents=True, exist_ok=True)
     (_p("report/tables/_numeros.tex")).write_text(tex, encoding="utf-8")

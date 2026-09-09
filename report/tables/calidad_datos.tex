@@ -7,14 +7,15 @@ dataset & regla & registros\_marcados & porcentaje & accion \\
 \midrule
 renipress & encoding archivo & 0 & 0.0 & leído como utf-8-sig \\
 renipress & encoding texto utf8 vs latin1 & 4 & 0.0 & corregido \\
-renipress & coordenadas vacias o no numericas & 13147 & 37.1 & eliminado \\
-renipress & coordenadas en cero & 7 & 0.0 & eliminado \\
+renipress & coordenadas recuperadas por ubigeo & 13154 & 100.0 & corregido (centroide del distrito declarado) — tasa de recuperación 100.0\% \\
+renipress & coordenadas vacias o no numericas & 0 & 0.0 & eliminado \\
+renipress & coordenadas en cero & 0 & 0.0 & eliminado \\
 renipress & signo de hemisferio invertido & 0 & 0.0 & corregido \\
 renipress & coordenadas lat lon intercambiadas & 0 & 0.0 & corregido \\
 renipress & coordenadas fuera de peru & 0 & 0.0 & eliminado \\
 renipress & codigos duplicados & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
-renipress & categoria no reconocida & 2544 & 11.4 & conservado con advertencia \\
-renipress & punto fuera de su poligono distrital & 1683 & 7.5 & conservado con advertencia \\
+renipress & categoria no reconocida & 8504 & 24.0 & conservado con advertencia \\
+renipress & punto fuera de su poligono distrital & 1683 & 4.7 & conservado con advertencia \\
 centros poblados & geometria vacia & 0 & 0.0 & eliminado \\
 centros poblados & coordenadas fuera de peru & 0 & 0.0 & eliminado \\
 centros poblados & encoding texto utf8 vs latin1 & 0 & 0.0 & sin problemas \\

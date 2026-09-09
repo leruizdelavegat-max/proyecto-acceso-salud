@@ -122,9 +122,11 @@ def mapa_departamento(dep, codigo, oferta_ambito, demanda_ambito, distritos, ub_
 
     fg_r = fm.FeatureGroup(name=f"Resolutivos II-1+ ({len(res)})", show=True)
     for _, row in res.iterrows():
-        fm.CircleMarker([row.geometry.y, row.geometry.x], radius=8, color="#fff", weight=2, fill=True,
+        aprox = " · ubicación aprox. (coord. recuperada)" if bool(row.get("coordenada_recuperada")) else ""
+        fm.CircleMarker([row.geometry.y, row.geometry.x], radius=8,
+                        color="#f4a300" if aprox else "#fff", weight=2, fill=True,
                         fill_color=COLOR_RES, fill_opacity=0.95,
-                        tooltip=f"★ {_v(row['NOMBRE'])} ({_v(row['categoria_norm'])})",
+                        tooltip=f"★ {_v(row['NOMBRE'])} ({_v(row['categoria_norm'])}){aprox}",
                         popup=_popup(row)).add_to(fg_r)
     fg_r.add_to(m)
 

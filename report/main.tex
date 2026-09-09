@@ -36,8 +36,11 @@
   \providecommand{\factorRodeo}{--}%
   \providecommand{\fraccionMuestra}{29}%
 }
-% factorRodeo puede faltar aunque _numeros.tex exista (si la figura no se generó)
+% pueden faltar aunque _numeros.tex exista (dependen de figura / quality_report)
 \providecommand{\factorRodeo}{--}
+\providecommand{\coordRecuperadas}{--}
+\providecommand{\coordFaltantes}{--}
+\providecommand{\tasaRecuperacion}{--}
 
 \title{\textbf{La hora dorada}\\[2mm]
 \large Tiempo de acceso por carretera a establecimientos de salud
@@ -103,7 +106,9 @@ Fuente & Contenido & Acceso / licencia & Limitaciones conocidas \\
 RENIPRESS / SUSALUD & Registro nacional de IPRESS (oferta) &
 CSV mensual, snapshot 2026-04-30; datos abiertos &
 Categorias sin normalizar; $\sim$37\% sin coordenada; ``operativo'' no
-garantiza personal ni insumos. \\
+garantiza personal ni insumos. \textbf{El registro es volatil}: al
+2026-08-31 el COD 00003598 de Huamanga figura ya como Hospital San Juan
+Bautista II-1 (en el snapshot era Centro de Salud I-4). \\
 SIGMED / MINEDU & Centros poblados con coordenadas (demanda) &
 Descarga espacial, shapefile; uso educativo &
 No trae poblacion; incluye centros poblados sin via de acceso. \\
@@ -141,11 +146,20 @@ $(\mathrm{lon},\mathrm{lat})$ cae dentro y $(\mathrm{lat},\mathrm{lon})$ no),
 fuera del \emph{bounding box} del Peru (eliminadas), codigos duplicados
 (se conserva la primera aparicion), puntos fuera de su poligono distrital
 (conservados con advertencia, volcados a un CSV) y problemas de codificacion
-UTF-8 / latin-1 (mojibake revertido). Eliminar filas en silencio se
-considero un enfoque fallido; toda eliminacion tiene una regla justificada
-y registrada. La regla de \emph{recuperacion} (corregir en vez de eliminar)
-se aplico al signo de hemisferio, al intercambio lat/lon y al mojibake;
-las demas son eliminaciones justificadas.
+UTF-8 / latin-1 (mojibake revertido).
+
+Eliminar filas en silencio se considero un enfoque fallido. Ademas de las
+correcciones \emph{in situ} (signo de hemisferio, intercambio lat/lon,
+mojibake), \textbf{se recuperan las coordenadas faltantes cuando el registro
+trae un UBIGEO valido}: el establecimiento se ubica en el centroide del
+distrito que el mismo declara (regla reproducible sobre los poligonos de
+INEI), marcado \texttt{coordenada\_recuperada} y con ubicacion aproximada.
+Asi se recuperaron \coordRecuperadas{} de \coordFaltantes{} registros sin
+coordenada (\textbf{tasa de recuperacion \tasaRecuperacion\,\%}); el resto,
+sin UBIGEO que calce con un distrito, se elimina con la regla registrada.
+Entre los recuperados esta el \textbf{Hospital II Pucallpa (EsSalud)} y el
+\textbf{Hospital Intercultural de Atalaya} --- este ultimo, el unico
+establecimiento resolutivo del sur de Ucayali.
 
 \inputsihay{tables/calidad_datos.tex}
 
@@ -247,10 +261,15 @@ por poblacion lo hace visible.
 \section{Limitaciones}
 
 \begin{itemize}
-\item \textbf{Tasa de error del registro.} El $\sim$37\% de RENIPRESS sin
-coordenada y el $\sim$13\% con categoria no reconocible se excluyen del
-calculo; si esos establecimientos no son aleatorios (p.\,ej.\ mas frecuentes
-en zonas remotas), la cobertura esta sobreestimada.
+\item \textbf{Tasa de error del registro.} Del $\sim$37\% de RENIPRESS sin
+coordenada se recupero el \tasaRecuperacion\,\% al centroide del distrito
+declarado; el resto se excluye. Si los excluidos no son aleatorios (p.\,ej.\
+mas frecuentes en zonas remotas), la cobertura esta sesgada.
+\item \textbf{Coordenadas recuperadas son aproximadas.} Los establecimientos
+recuperados quedan en el \emph{centroide} de su distrito, no en su ubicacion
+real; para distritos amazonicos extensos eso puede desplazar el punto varios
+kilometros y alterar su tiempo de acceso. Van marcados
+(\texttt{coordenada\_recuperada}) y con borde distinto en el mapa.
 \item \textbf{Sesgo de cobertura de OSM.} La red vial rural y amazonica de
 OSM esta incompleta. Algunos centros poblados marcados ``sin ruta'' podrian
 tener una trocha no mapeada; otros, una via mapeada que en la practica es

@@ -85,6 +85,28 @@ def test_coord_fuera_de_peru_se_elimina():
     assert list(out["id"]) == [0]
 
 
+def test_recuperar_coordenadas_por_ubigeo():
+    qr = _QR()
+    centroides = {"200101": (-80.6, -5.2), "250301": (-73.77, -10.73)}
+    df = pd.DataFrame({
+        "NORTE": [None, "-8.4", "0", None],
+        "ESTE":  [None, "-74.5", "0", "-74.2"],
+        "UBIGEO": ["200101", "200105", "250301", "999999"],   # 1º y 3º recuperables; 4º sin distrito
+        "id": [1, 2, 3, 4],
+    })
+    out = V.recuperar_coordenadas_por_ubigeo(df, "NORTE", "ESTE", "UBIGEO",
+                                             centroides, 1e-6, "t", qr)
+    assert bool(out.loc[out.id == 1, "coordenada_recuperada"].iloc[0]) is True
+    assert float(out.loc[out.id == 1, "ESTE"].iloc[0]) == pytest.approx(-80.6)   # lon
+    assert float(out.loc[out.id == 1, "NORTE"].iloc[0]) == pytest.approx(-5.2)   # lat
+    assert bool(out.loc[out.id == 3, "coordenada_recuperada"].iloc[0]) is True   # tenía ceros
+    assert bool(out.loc[out.id == 2, "coordenada_recuperada"].iloc[0]) is False  # ya tenía coord
+    assert bool(out.loc[out.id == 4, "coordenada_recuperada"].iloc[0]) is False  # UBIGEO sin distrito
+    # regla registrada con tasa de recuperación (2 de 3 faltantes)
+    fila = [x for x in qr.rows if x[1] == "coordenadas_recuperadas_por_ubigeo"][0]
+    assert fila[2] == 3 and fila[3] == 2
+
+
 def test_marcar_duplicados_conserva_primera():
     qr = _QR()
     df = pd.DataFrame({"cod": ["a", "b", "a", "c"], "v": [1, 2, 3, 4]})

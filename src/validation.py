@@ -128,6 +128,52 @@ def arreglar_encoding_columnas(df, columnas, dataset, qr: QualityReport):
 
 
 # ===========================================================================
+# Recuperación de coordenadas (nivel "excelente" del enunciado)
+# ===========================================================================
+def centroides_por_ubigeo(distritos, ubigeo_dist_col: str) -> dict:
+    """{ubigeo(6 díg.): (lon, lat)} — punto representativo de cada distrito."""
+    d = distritos.copy()
+    d["_ub"] = d[ubigeo_dist_col].astype(str).str.zfill(6)
+    pr = d.geometry.representative_point()
+    return {ub: (float(p.x), float(p.y)) for ub, p in zip(d["_ub"], pr)}
+
+
+def recuperar_coordenadas_por_ubigeo(df, lat_col, lon_col, ubigeo_col,
+                                     centroides: dict, tol: float,
+                                     dataset: str, qr: QualityReport):
+    """Antes de eliminar por coordenada faltante: si el registro trae un
+    `UBIGEO` que calza con un distrito, se ubica en el **centroide de ese
+    distrito** (regla reproducible sobre `limites_distrito.gpkg`). Marca
+    `coordenada_recuperada`. Reporta la **tasa de recuperación**."""
+    lat = pd.to_numeric(df[lat_col], errors="coerce")
+    lon = pd.to_numeric(df[lon_col], errors="coerce")
+    faltante = lat.isna() | lon.isna() | lat.abs().lt(tol) | lon.abs().lt(tol)
+    n_falta = int(faltante.sum())
+
+    ub = df[ubigeo_col].astype(str).str.zfill(6)
+    recuperable = faltante & ub.isin(centroides)
+    df = df.copy()
+    # las columnas de RENIPRESS vienen como texto; se escribe texto y
+    # validar_coordenadas_xy() las convierte a numérico después
+    df[lon_col] = df[lon_col].astype("object")
+    df[lat_col] = df[lat_col].astype("object")
+    df["coordenada_recuperada"] = False
+    for i in df.index[recuperable]:
+        lon_c, lat_c = centroides[ub[i]]
+        df.at[i, lon_col] = repr(lon_c)
+        df.at[i, lat_col] = repr(lat_c)
+        df.at[i, "coordenada_recuperada"] = True
+
+    n_rec = int(recuperable.sum())
+    tasa = round(100 * n_rec / n_falta, 1) if n_falta else 0.0
+    qr.check(dataset, "coordenadas_recuperadas_por_ubigeo", n_falta, n_rec,
+             f"corregido (centroide del distrito declarado) — tasa de recuperación {tasa}%",
+             "coordenada faltante/cero pero con UBIGEO que calza con un distrito de INEI; "
+             "se ubica en el centroide de ese distrito (ubicación aproximada, marcada)")
+    return df
+
+
+# ===========================================================================
 # Validación de coordenadas (funciones puras)
 # ===========================================================================
 def validar_coordenadas_xy(df, lat_col, lon_col, bbox: dict, tol: float,
@@ -249,8 +295,18 @@ def limpiar_renipress(renipress_raw, nota_encoding, cfg, qr, distritos):
              0 if nota_encoding["encoding_usado"] == cfg["fuentes"]["renipress"]["encoding"] else 1,
              f"leído como {nota_encoding['encoding_usado']}", nota_encoding["detalle"])
 
+    ub_dist = _col(distritos.columns, ["UBIGEO", "IDDIST", "COD_DIST"]) if distritos is not None else None
+
     r = renipress_raw.copy()
     r = arreglar_encoding_columnas(r, COLS_TEXTO_RENIPRESS, ds, qr)
+    if distritos is not None and ub_dist:
+        r = recuperar_coordenadas_por_ubigeo(
+            r, "NORTE", "ESTE", "UBIGEO", centroides_por_ubigeo(distritos, ub_dist),
+            tol, ds, qr)
+    else:
+        r["coordenada_recuperada"] = False
+        qr.check(ds, "coordenadas_recuperadas_por_ubigeo", 0, 0, "no evaluado",
+                 "no hay capa de límites distritales para recuperar por UBIGEO")
     r = validar_coordenadas_xy(r, "NORTE", "ESTE", bbox, tol, ds, qr)
     r = marcar_duplicados(r, "COD_IPRESS", ds, qr)
 
@@ -265,7 +321,6 @@ def limpiar_renipress(renipress_raw, nota_encoding, cfg, qr, distritos):
 
     oferta = gpd.GeoDataFrame(r, geometry=gpd.points_from_xy(r["_lon"], r["_lat"]), crs="EPSG:4326")
 
-    ub_dist = _col(distritos.columns, ["UBIGEO", "IDDIST", "COD_DIST"]) if distritos is not None else None
     logs = ruta(cfg["rutas"]["reports"])
     if distritos is not None and ub_dist:
         oferta = marcar_fuera_de_su_distrito(oferta, distritos, "UBIGEO", ub_dist, ds, qr,
