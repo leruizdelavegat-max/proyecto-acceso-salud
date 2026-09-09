@@ -1,59 +1,47 @@
-23:30:59 INFO === Fase 2 — ruteo pyosmium/NetworkX | perfiles=['car', 'bike', 'foot'] | deptos=['piura', 'ayacucho', 'ucayali'] ===
-23:31:01 INFO   muestreo · n_total: 17187
-23:31:01 INFO   muestreo · tope: 5000
-23:31:01 INFO   muestreo · fraccion: 0.2909
-23:31:01 INFO   muestreo · n_muestra: 5000
-23:31:01 INFO   muestreo · n_distritos: 201
-23:31:01 INFO   muestreo · distritos_sin_muestra: 0
-23:31:01 INFO   muestreo · puntos_por_distrito_min: 1
-23:31:01 INFO   muestreo · puntos_por_distrito_max: 145
-23:31:01 INFO   muestreo · estrategia: estratificado_por_distrito (proporcional, restos mayores)
-23:31:01 INFO   muestreo · semilla: 42
-23:31:01 INFO   muestreo · implicacion_error_muestral: se rutea el 29.1% de los centros poblados; las métricas de cobertura de la Fase 3 son estimaciones con error de muestreo. Al no haber población en la fuente, la estratificación es por distrito (no ponderada por población): distritos con muchos centros poblados pequeños quedan sub-muestreados respecto a un diseño poblacional.
-23:31:02 INFO --- PIURA: 1255 centros poblados muestreados, 1264 establecimientos (29 resolutivos) ---
-23:31:02 INFO   construyendo grafo piura/car desde peru-latest.osm.pbf ...
-23:34:22 INFO   pbf: 469717 vías highway con coordenadas (199s, cacheado en memoria)
-23:37:10 INFO   grafo car: 446800 nodos, 1190171 aristas (366s)
-23:38:40 INFO     piura/car matriz completa 1255 origenes x 279 instalaciones (79s)
-23:38:43 INFO   construyendo grafo piura/bike desde peru-latest.osm.pbf ...
-23:42:29 INFO   grafo bike: 578854 nodos, 1610638 aristas (225s)
-23:42:54 INFO     piura/bike nearest-resolutivo (29 resolutivos, 7s)
-23:42:55 INFO   construyendo grafo piura/foot desde peru-latest.osm.pbf ...
-23:47:34 INFO   grafo foot: 718588 nodos, 2023316 aristas (279s)
-23:48:11 INFO     piura/foot nearest-resolutivo (29 resolutivos, 10s)
-23:48:13 INFO --- AYACUCHO: 3242 centros poblados muestreados, 708 establecimientos (11 resolutivos) ---
-23:48:14 INFO   construyendo grafo ayacucho/car desde peru-latest.osm.pbf ...
-23:51:50 INFO   pbf: 85810 vías highway con coordenadas (216s, cacheado en memoria)
-23:52:44 INFO   grafo car: 88993 nodos, 236841 aristas (270s)
-23:52:56 INFO     ayacucho/car matriz completa 3242 origenes x 160 instalaciones (9s)
-23:52:58 INFO   construyendo grafo ayacucho/bike desde peru-latest.osm.pbf ...
-23:54:35 INFO   grafo bike: 106914 nodos, 286142 aristas (97s)
-23:54:40 INFO     ayacucho/bike nearest-resolutivo (11 resolutivos, 1s)
-23:54:42 INFO   construyendo grafo ayacucho/foot desde peru-latest.osm.pbf ...
-23:55:53 INFO   grafo foot: 111804 nodos, 300672 aristas (72s)
-23:55:57 INFO     ayacucho/foot nearest-resolutivo (11 resolutivos, 1s)
-23:55:58 INFO --- UCAYALI: 503 centros poblados muestreados, 329 establecimientos (6 resolutivos) ---
-23:55:58 INFO   construyendo grafo ucayali/car desde peru-latest.osm.pbf ...
-23:59:18 INFO   pbf: 47867 vías highway con coordenadas (199s, cacheado en memoria)
-23:59:38 INFO   grafo car: 38162 nodos, 99985 aristas (220s)
-23:59:41 INFO     ucayali/car matriz completa 503 origenes x 66 instalaciones (2s)
-23:59:42 INFO   construyendo grafo ucayali/bike desde peru-latest.osm.pbf ...
-00:00:12 INFO   grafo bike: 55666 nodos, 145888 aristas (30s)
-00:00:14 INFO     ucayali/bike nearest-resolutivo (6 resolutivos, 1s)
-00:00:16 INFO   construyendo grafo ucayali/foot desde peru-latest.osm.pbf ...
-00:00:45 INFO   grafo foot: 56981 nodos, 149640 aristas (30s)
-00:00:48 INFO     ucayali/foot nearest-resolutivo (6 resolutivos, 1s)
-00:00:49 INFO snapping:
+07:01:57 INFO === Fase 2 — ruteo pyosmium/NetworkX | perfiles=['car', 'bike', 'foot'] | deptos=['piura', 'ayacucho', 'ucayali'] ===
+07:02:00 INFO   muestreo · n_total: 17187
+07:02:00 INFO   muestreo · tope: 5000
+07:02:00 INFO   muestreo · fraccion: 0.2909
+07:02:00 INFO   muestreo · n_muestra: 5000
+07:02:00 INFO   muestreo · n_distritos: 201
+07:02:00 INFO   muestreo · distritos_sin_muestra: 0
+07:02:00 INFO   muestreo · puntos_por_distrito_min: 1
+07:02:00 INFO   muestreo · puntos_por_distrito_max: 145
+07:02:00 INFO   muestreo · estrategia: estratificado_por_distrito (proporcional, restos mayores)
+07:02:00 INFO   muestreo · semilla: 42
+07:02:00 INFO   muestreo · implicacion_error_muestral: se rutea el 29.1% de los centros poblados; las métricas de cobertura de la Fase 3 son estimaciones con error de muestreo. Al no haber población en la fuente, la estratificación es por distrito (no ponderada por población): distritos con muchos centros poblados pequeños quedan sub-muestreados respecto a un diseño poblacional.
+07:02:01 INFO --- PIURA: 1255 centros poblados muestreados, 1264 establecimientos (29 resolutivos) ---
+07:02:01 INFO   grafo piura/car desde caché piura_car.pkl
+07:04:45 INFO     piura/car matriz completa 1255 origenes x 318 instalaciones (141s)
+07:04:52 INFO   grafo piura/bike desde caché piura_bike.pkl
+07:05:41 INFO     piura/bike nearest-resolutivo (29 resolutivos, 35s)
+07:05:43 INFO   grafo piura/foot desde caché piura_foot.pkl
+07:06:35 INFO     piura/foot nearest-resolutivo (29 resolutivos, 27s)
+07:06:37 INFO --- AYACUCHO: 3242 centros poblados muestreados, 708 establecimientos (11 resolutivos) ---
+07:06:38 INFO   grafo ayacucho/car desde caché ayacucho_car.pkl
+07:06:52 INFO     ayacucho/car matriz completa 3242 origenes x 177 instalaciones (12s)
+07:06:55 INFO   grafo ayacucho/bike desde caché ayacucho_bike.pkl
+07:07:06 INFO     ayacucho/bike nearest-resolutivo (11 resolutivos, 9s)
+07:07:09 INFO   grafo ayacucho/foot desde caché ayacucho_foot.pkl
+07:07:14 INFO     ayacucho/foot nearest-resolutivo (11 resolutivos, 3s)
+07:07:16 INFO --- UCAYALI: 503 centros poblados muestreados, 329 establecimientos (6 resolutivos) ---
+07:07:16 INFO   grafo ucayali/car desde caché ucayali_car.pkl
+07:07:20 INFO     ucayali/car matriz completa 503 origenes x 72 instalaciones (3s)
+07:07:21 INFO   grafo ucayali/bike desde caché ucayali_bike.pkl
+07:07:23 INFO     ucayali/bike nearest-resolutivo (6 resolutivos, 1s)
+07:07:25 INFO   grafo ucayali/foot desde caché ucayali_foot.pkl
+07:07:27 INFO     ucayali/foot nearest-resolutivo (6 resolutivos, 1s)
+07:07:28 INFO snapping:
 profile    tipo  n_puntos  n_snap_fallido  snap_dist_media_m  snap_dist_p95_m  snap_dist_max_m
    bike demanda      5000            1632             5371.4           8237.1         382491.8
-   bike  oferta       505              11             1152.8             79.7         349035.0
+   bike  oferta       567              11             1030.8             79.7         349035.0
     car demanda      5000            1820             5563.7           9767.8         382563.2
-    car  oferta       505              11             1156.6             87.3         349094.7
+    car  oferta       567              11             1034.3             87.2         349094.7
    foot demanda      5000            1631             5369.9           8237.1         382491.8
-   foot  oferta       505              11             1148.7             75.1         349035.0
-00:00:50 INFO acceso: 18645 filas · no ruteables: 7457 (40.0%) — marcados, NO se usa recta
-00:00:50 INFO   bike  mediana=251.3 min  p90=654.8 min  máx=2671.2 min
-00:00:50 INFO   car   mediana=22.2 min  p90=76.9 min  máx=245.8 min
-00:00:50 INFO   foot  mediana=832.9 min  p90=2179.2 min  máx=8904.1 min
-00:00:50 INFO car vs foot: instalación más cercana difiere en 93.8%; tiempo a pie ~26.8x el de auto
-00:00:50 INFO === fin en 1791s ===
+   foot  oferta       567              11             1027.1             76.8         349035.0
+07:07:29 INFO acceso: 15000 filas · no ruteables: 5083 (33.9%) — marcados, NO se usa recta
+07:07:29 INFO   bike  mediana=248.8 min  p90=626.5 min  máx=2671.2 min
+07:07:29 INFO   car   mediana=19.0 min  p90=60.8 min  máx=206.5 min
+07:07:29 INFO   foot  mediana=823.1 min  p90=2082.5 min  máx=8904.1 min
+07:07:29 INFO car vs foot: instalación más cercana difiere en 95.3%; tiempo a pie ~32.9x el de auto
+07:07:29 INFO === fin en 332s ===

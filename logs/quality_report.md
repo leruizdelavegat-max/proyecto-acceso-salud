@@ -1,5 +1,5 @@
 # Informe de Calidad de Datos — Fase 1
-Generado: 2026-09-09T06:14:05+00:00
+Generado: 2026-09-09T12:01:54+00:00
 
 | Dataset | Regla | Evaluados | Marcados | % | Acción | Motivo |
 |---|---|---:|---:|---:|---|---|
@@ -11,7 +11,7 @@ Generado: 2026-09-09T06:14:05+00:00
 | renipress | coordenadas_lat_lon_intercambiadas | 35471 | 0 | 0.0% | corregido | (lat,lon) cae fuera de Perú pero (lon,lat) cae dentro: se intercambian |
 | renipress | coordenadas_fuera_de_peru | 35471 | 0 | 0.0% | eliminado | fuera de lon[-81.4,-68.6] x lat[-18.4,-0.04] |
 | renipress | codigos_duplicados | 22317 | 0 | 0.0% | eliminado (se conserva la 1ª aparición) | 'COD_IPRESS' debe identificar un único registro |
-| renipress | categoria_no_reconocida | 22317 | 2988 | 13.39% | conservado con advertencia | CATEGORIA vacía, '0' o que no calza con el patrón romano+sufijo |
+| renipress | categoria_no_reconocida | 22317 | 2544 | 11.4% | conservado con advertencia | CATEGORIA vacía, '0' o que no calza con el patrón romano+sufijo |
 | renipress | punto_fuera_de_su_poligono_distrital | 22317 | 1683 | 7.54% | conservado con advertencia | el punto no cae en el polígono del distrito que declara su UBIGEO |
 | centros_poblados | geometria_vacia | 153400 | 0 | 0.0% | eliminado | sin geometría no se puede rutear |
 | centros_poblados | coordenadas_fuera_de_peru | 153400 | 0 | 0.0% | eliminado | el punto representativo cae fuera del bbox de Perú |
