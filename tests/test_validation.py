@@ -17,6 +17,9 @@ def test_normalizar_categoria():
     assert V.normalizar_categoria("  ii - 1 ") == "II-1"
     assert V.normalizar_categoria("III1") == "III-1"
     assert V.normalizar_categoria("I-2") == "I-2"
+    assert V.normalizar_categoria("I-4") == "I-4"        # I-4 existe (bug: el patrón no la aceptaba)
+    assert V.normalizar_categoria("I 4") == "I-4"
+    assert V.normalizar_categoria("II-E") == "II-E"
     assert V.normalizar_categoria("0") is None
     assert V.normalizar_categoria("S/C") is None
     assert V.normalizar_categoria("HOSPITAL") is None

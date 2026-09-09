@@ -64,7 +64,7 @@ class QualityReport:
 # ===========================================================================
 # Estandarización de texto (funciones puras)
 # ===========================================================================
-_PAT_CAT = re.compile(r"^(I{1,3})-?(1|2|3|E)$")
+_PAT_CAT = re.compile(r"^(I{1,3})-?(1|2|3|4|E)$")   # I-4 existe (categoría I-4 de RENIPRESS)
 _CAT_VACIA = {"", "0", "NAN", "NONE", "S/C", "SINCATEGORIA", "SINCATEGORÍA"}
 _MOJIBAKE = {"ÿ": "ñ", "Ÿ": "Ñ"}
 _DOBLE_COD = ("Ã", "Â", "�")
