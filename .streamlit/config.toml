@@ -1,0 +1,10 @@
+# Tema del tablero (Fase 4). Paleta institucional, sobria.
+[theme]
+primaryColor = "#1f3a5f"           # azul institucional: chips, slider, enlaces, foco
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f2f5f9"
+textColor = "#1a1f2b"
+font = "sans serif"
+
+[server]
+headless = true
