@@ -8,8 +8,11 @@ de Perú: costero, andino y amazónico (ver `config.md`).
 
 - `config.md` — todos los parámetros del proyecto (departamentos, rutas, umbrales, motor de enrutamiento)
 - `requirements.txt` — dependencias de Python
-- `Fase1_Adquisicion_y_Validacion.ipynb` — Fase 1: descarga, limpieza/validación, recorte por departamento (RENIPRESS, SIGMED, límites administrativos) y mapas interactivos Folium (demanda vs. oferta resolutiva)
-- `src/routing.py` — Fase 2: grafo OSM por departamento (OSMnx), snapping, muestreo, matriz de tiempos (NetworkX) y caché
+- `src/acquisition.py` — Fase 1 (a): adquisición (caché `_data/` / descarga), `download_log.json`, lectura controlando encoding
+- `src/validation.py` — Fase 1 (b): limpieza, validación espacial, filtrado de ámbito, almacenamiento GeoPackage, `quality_report.csv`
+- `src/mapas.py` — Fase 1 (Paso 5): mapas interactivos Folium por departamento
+- `Fase1_Adquisicion_y_Validacion.ipynb` — notebook delgado que ejecuta los módulos anteriores y muestra los mapas en línea
+- `src/routing.py` — Fase 2: grafo vial desde el `.pbf` (pyosmium), snapping, muestreo, matriz de tiempos (scipy.csgraph) y caché
 - `tests/test_routing.py` — pruebas de las funciones puras de la Fase 2 (sin red)
 - `src/poblacion.py` — Fase 3 (insumo): población por centro poblado (raster WorldPop)
 - `src/metrics.py` — Fase 3: métricas de acceso (funciones DataFrame→DataFrame)
@@ -35,17 +38,21 @@ pip install -r requirements.txt
 ## Cómo correr la Fase 1
 
 ```bash
-jupyter lab Fase1_Adquisicion_y_Validacion.ipynb
+python src/acquisition.py     # 1. adquisición: caché _data/ o descarga -> data/raw/ + download_log.json
+python src/validation.py      # 2-5. limpieza, validación, filtrado, GeoPackage, quality_report + mapas
+pytest -q tests/test_validation.py
 ```
 
-Correr todas las celdas en orden (Run All). El notebook vive en la raíz del
-repo y todas sus rutas son relativas a ella. Las fases siguientes siguen
-siendo scripts en `src/`:
+`src/validation.py --sin-mapas` omite el Paso 5. El notebook
+`Fase1_Adquisicion_y_Validacion.ipynb` es un envoltorio delgado: ejecuta esos
+mismos módulos y muestra los mapas Folium en línea (útil para el video).
+
+Las fases 3 y 5 también son scripts:
 
 ```bash
 python src/poblacion.py       # Fase 3 (insumo): población por centro poblado (WorldPop)
 python src/metrics.py         # Fase 3: métricas de acceso -> data/outputs/*.csv + report/tables/*.tex
-python src/export.py          # Genera figuras para el informe
+python src/export.py          # Fase 5: figuras y tablas para el informe
 ```
 
 ## Cómo correr la Fase 2 (ruteo — pyosmium + NetworkX)
