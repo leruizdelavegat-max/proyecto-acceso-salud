@@ -12,7 +12,13 @@ data/raw/*
 # Si pesan demasiado, usar Git LFS en vez de excluirlos aquí.
 
 *.pbf
+
+# Fase 2 — grafos OSM descargados/cacheados (OSMnx) + caché de Overpass.
+# El entregable es la matriz en data/outputs/, no el grafo.
+data/interim/
+
 __pycache__/
 *.pyc
+.pytest_cache/
 .venv/
 .DS_Store

@@ -1,14 +1,41 @@
+# --- núcleo geoespacial ---
 geopandas
 shapely
 pyogrio
-pyrosm
-osmnx
-networkx
 pandas
+numpy
+
+# --- Fase 1: adquisición y validación ---
 pyyaml
 chardet
 requests
+
+# --- Fase 2: ruteo (pyosmium + NetworkX; ver README) ---
+# La red vial se lee del .pbf local de Perú con `osmium` (pyosmium) y se
+# rutea con Dijkstra sobre NetworkX. `scipy` (ya viene con el stack
+# científico) da el KDTree del snapping. `pyarrow` es para la caché Parquet.
+# `osmnx` solo se usa como fallback opcional (grafo.fuente: osmnx_overpass).
+osmium
+networkx
+scipy
+pyarrow
+osmnx>=2.0   # opcional: solo si se cambia routing.grafo.fuente a osmnx_overpass
+
+# --- Fase 3: métricas ---
+# (usa pandas/geopandas/numpy ya listados)
+
+# --- Fase 4: dashboard ---
 streamlit
+folium
+branca
+mapclassify
+
+# --- Fase 5 / figuras ---
 matplotlib
+
+# --- notebooks ---
 jupyterlab
 ipykernel
+
+# --- desarrollo ---
+pytest

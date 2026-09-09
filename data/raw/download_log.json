@@ -1,8 +1,8 @@
 {
   "renipress": {
-    "ultima_verificacion": "2026-09-08T15:50:48+00:00",
-    "estado": "copiado_desde_cache_local",
-    "archivo_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\renipress.csv",
+    "ultima_verificacion": "2026-09-08T20:33:25+00:00",
+    "estado": "ya_existia",
+    "archivo_local": "c:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\renipress.csv",
     "cache_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\_data\\RENIPRESS_30-04-2026.csv",
     "tamano_bytes": 19074859,
     "fecha_archivo_cache": "2026-09-08T13:29:29+00:00",
@@ -10,19 +10,19 @@
     "fecha_incorporacion_al_repo": "2026-09-08T15:50:48+00:00"
   },
   "sigmed": {
-    "ultima_verificacion": "2026-09-08T15:50:49+00:00",
-    "estado": "copiado_desde_cache_local",
-    "archivo_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\centros_poblados.shp",
+    "ultima_verificacion": "2026-09-08T20:33:25+00:00",
+    "estado": "ya_existia",
+    "archivo_local": "c:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\centros_poblados.shp",
     "cache_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\_data\\CP_P.shp",
-    "tamano_bytes": 83993256,
+    "tamano_bytes": 4295300,
     "fecha_archivo_cache": "2020-02-05T17:49:00+00:00",
     "fecha_dato": null,
     "fecha_incorporacion_al_repo": "2026-09-08T15:50:49+00:00"
   },
   "osm_peru": {
-    "ultima_verificacion": "2026-09-08T15:50:51+00:00",
-    "estado": "copiado_desde_cache_local",
-    "archivo_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\peru-latest.osm.pbf",
+    "ultima_verificacion": "2026-09-08T20:33:25+00:00",
+    "estado": "ya_existia",
+    "archivo_local": "c:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\peru-latest.osm.pbf",
     "cache_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\_data\\peru-260907.osm.pbf",
     "tamano_bytes": 255851767,
     "fecha_archivo_cache": "2026-09-08T13:29:29+00:00",
@@ -30,8 +30,8 @@
     "fecha_incorporacion_al_repo": "2026-09-08T15:50:51+00:00"
   },
   "limites_administrativos.departamento": {
-    "ultima_verificacion": "2026-09-08T15:50:51+00:00",
-    "estado": "copiado_desde_cache_local",
+    "ultima_verificacion": "2026-09-08T18:39:50+00:00",
+    "estado": "ya_existia",
     "archivo_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\limites_departamento.gpkg",
     "cache_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\_data\\DEPARTAMENTO.gpkg",
     "tamano_bytes": 5492736,
@@ -40,8 +40,8 @@
     "fecha_incorporacion_al_repo": "2026-09-08T15:50:51+00:00"
   },
   "limites_administrativos.provincia": {
-    "ultima_verificacion": "2026-09-08T15:50:51+00:00",
-    "estado": "copiado_desde_cache_local",
+    "ultima_verificacion": "2026-09-08T18:39:50+00:00",
+    "estado": "ya_existia",
     "archivo_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\limites_provincia.gpkg",
     "cache_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\_data\\PROVINCIA.gpkg",
     "tamano_bytes": 12111872,
@@ -50,13 +50,31 @@
     "fecha_incorporacion_al_repo": "2026-09-08T15:50:51+00:00"
   },
   "limites_administrativos.distrito": {
-    "ultima_verificacion": "2026-09-08T15:50:51+00:00",
-    "estado": "copiado_desde_cache_local",
+    "ultima_verificacion": "2026-09-08T18:39:50+00:00",
+    "estado": "ya_existia",
     "archivo_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\limites_distrito.gpkg",
     "cache_local": "C:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\_data\\DISTRITO.gpkg",
     "tamano_bytes": 29106176,
     "fecha_archivo_cache": "2026-03-06T16:55:36+00:00",
     "fecha_dato": null,
     "fecha_incorporacion_al_repo": "2026-09-08T15:50:51+00:00"
+  },
+  "limites_departamento": {
+    "ultima_verificacion": "2026-09-08T20:33:25+00:00",
+    "estado": "ya_existia",
+    "archivo_local": "c:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\limites_departamento.gpkg",
+    "tamano_bytes": 5492736
+  },
+  "limites_provincia": {
+    "ultima_verificacion": "2026-09-08T20:33:25+00:00",
+    "estado": "ya_existia",
+    "archivo_local": "c:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\limites_provincia.gpkg",
+    "tamano_bytes": 12111872
+  },
+  "limites_distrito": {
+    "ultima_verificacion": "2026-09-08T20:33:25+00:00",
+    "estado": "ya_existia",
+    "archivo_local": "c:\\Users\\User\\Documents\\GitHub\\proyecto-acceso-salud\\data\\raw\\limites_distrito.gpkg",
+    "tamano_bytes": 29106176
   }
 }

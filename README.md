@@ -8,8 +8,9 @@ de Perú: costero, andino y amazónico (ver `config.md`).
 
 - `config.md` — todos los parámetros del proyecto (departamentos, rutas, umbrales, motor de enrutamiento)
 - `requirements.txt` — dependencias de Python
-- `Fase1_Adquisicion_y_Validacion.ipynb` — Fase 1: descarga, limpieza/validación y recorte por departamento (RENIPRESS, SIGMED, límites administrativos)
-- `src/routing.py` — Fase 2: motor de enrutamiento + caché de matriz de tiempos
+- `Fase1_Adquisicion_y_Validacion.ipynb` — Fase 1: descarga, limpieza/validación, recorte por departamento (RENIPRESS, SIGMED, límites administrativos) y mapas interactivos Folium (demanda vs. oferta resolutiva)
+- `src/routing.py` — Fase 2: grafo OSM por departamento (OSMnx), snapping, muestreo, matriz de tiempos (NetworkX) y caché
+- `tests/test_routing.py` — pruebas de las funciones puras de la Fase 2 (sin red)
 - `src/metrics.py` — Fase 3: cálculo de métricas de acceso
 - `src/export.py` — tablas y figuras para el informe
 - `app.py` — Fase 4: dashboard Streamlit
@@ -17,7 +18,8 @@ de Perú: costero, andino y amazónico (ver `config.md`).
 - `_data/` — data provista para el curso (nunca se modifica; ver más abajo)
 - `data/raw/` — datos crudos (copiados de `_data/` o descargados; no se modifican)
 - `data/processed/` — datos limpios y validados (GeoPackage)
-- `data/outputs/` — resultados finales (incl. matriz de tiempos precalculada)
+- `data/outputs/` — resultados finales: mapas interactivos (`mapa_acceso_<depto>.html`) y la matriz de tiempos precalculada de la Fase 2 (`matriz_tiempos.parquet`)
+- `data/interim/` — grafos OSM cacheados + caché de Overpass (ignorado por git; se regenera solo)
 - `logs/` — registros de ejecución e informe de calidad de datos
 
 ## Configuración inicial
@@ -35,13 +37,83 @@ jupyter lab Fase1_Adquisicion_y_Validacion.ipynb
 ```
 
 Correr todas las celdas en orden (Run All). El notebook vive en la raíz del
-repo y todas sus rutas son relativas a ella. Las fases siguientes (Fase 2 en
-adelante) siguen siendo scripts en `src/`:
+repo y todas sus rutas son relativas a ella. Las fases siguientes siguen
+siendo scripts en `src/`:
 
 ```bash
-python src/routing.py         # Fase 2: calcula y cachea la matriz de tiempos
 python src/metrics.py         # Fase 3: calcula métricas de acceso por departamento
 python src/export.py          # Genera tablas y figuras para el informe
+```
+
+## Cómo correr la Fase 2 (ruteo — pyosmium + NetworkX)
+
+Motor: **grafo NetworkX construido desde el `.pbf` local con `pyosmium`**
+(`config.md → routing.motor: networkx`, `grafo.fuente: pbf_local`).
+
+Decisiones y obstáculos (para el video):
+- Se **descartó OSRM en Docker** (la opción preferida del enunciado): la BIOS
+  de la máquina tiene la virtualización desactivada y bloqueada por IT, así
+  que WSL2/Docker no arrancan (`WslRegisterDistribution 0x80370102`).
+- Se **descartó `pyrosm`**: no compila en Python 3.14 sin MSVC Build Tools.
+- Se **descartó OSMnx/Overpass**: el servidor público `overpass-api.de`
+  estaba inalcanzable (timeout) el día de la corrida, y a escala
+  departamental Overpass parte la consulta en decenas de sub-peticiones.
+- Solución: leer la red vial directamente del `data/raw/peru-latest.osm.pbf`
+  de la Fase 1 con `pyosmium` (offline, reproducible). Queda `osmnx_overpass`
+  como fallback conmutable en `config.md`.
+
+**1. Dependencias**:
+
+```bash
+pip install -r requirements.txt      # osmium (pyosmium), networkx, scipy, pyarrow
+```
+
+**2. Prueba rápida** (lee el `.pbf`, arma el grafo del departamento más chico
+y rutea ~30 centros poblados; sin red):
+
+```bash
+python src/routing.py --smoke
+```
+
+**3. Correr el ruteo** — empezar por el departamento más chico (checkpoint):
+
+```bash
+python src/routing.py --departamento ucayali     # 1 depto (~5 min)
+python src/routing.py --all                       # los 3 (~25-45 min la 1ª vez)
+python src/routing.py --all --perfil car          # solo un perfil si falta RAM/tiempo
+```
+
+Notas de rendimiento (probado en un equipo con 8 GB de RAM):
+- El `.pbf` de Perú se escanea **una sola vez** por corrida (~2 min) y las
+  vías quedan en memoria; cada grafo (departamento × perfil) se **simplifica**
+  (colapsa los puntos-forma: ~18× menos nodos) y se cachea en
+  `data/interim/graphs/*.pkl`. Re-correr carga los `.pkl` en segundos.
+- La matriz se acumula en `data/outputs/matriz_tiempos.parquet`; los pares ya
+  calculados no se recomputan. `--forzar` ignora todas las cachés.
+- **Cierra Chrome y apps pesadas antes del primer `--all`.** Si aun así falta
+  RAM: córrelo por perfil (`--perfil car`, luego `bike`, luego `foot`) o por
+  departamento, o baja `routing.muestreo.tope_puntos_demanda` en `config.md`.
+- El entregable es el Parquet: una vez calculado (aquí o en otra máquina /
+  Colab), se commitea y el dashboard de la Fase 4 corre sin volver a rutear.
+
+Salidas:
+
+| Archivo | Contenido |
+|---|---|
+| `data/outputs/matriz_tiempos.parquet` | matriz **completa** origen × instalación para el perfil `car`, con destinos = resolutivos + I-3 + I-4 (candidatos a upgrade en la Fase 4). Para bike/foot: solo el resolutivo más cercano por origen. |
+| `data/outputs/acceso_nearest.parquet` | por centro poblado y perfil: instalación más cercana, tiempo, distancia, `routable` |
+| `data/outputs/routing_snap.parquet` | nodo de enganche de cada punto (demanda y oferta), distancia de snap, `snap_ok` |
+| `data/processed/demanda_muestreada.gpkg` | los ≤ 5 000 centros poblados ruteados (muestreo estratificado por distrito) |
+| `logs/snapping_report.csv` | por perfil y tipo: puntos que no engancharon y distancia media/p95/máx de snap |
+| `logs/routing_run.log` | log de ejecución (tiempo transcurrido, progreso, comparación car-vs-foot) |
+
+Puntos sin ruta (isla, componente desconectada) se marcan `routable=False`;
+**no** se les asigna distancia en línea recta.
+
+Pruebas de las funciones puras (no necesitan red):
+
+```bash
+pytest -q tests/test_routing.py
 ```
 
 ## Cómo correr el dashboard
@@ -59,9 +131,24 @@ streamlit run app.py
 
 ## Estado de la Fase 1 (adquisición y validación)
 
-Todo el código de la Fase 1 (adquisición + validación) vive, sin depender de
-`src/`, en `Fase1_Adquisicion_y_Validacion.ipynb`. Ya viene ejecutado con
-outputs reales guardados en el propio notebook.
+Todo el código de la Fase 1 vive, sin depender de `src/`, en
+`Fase1_Adquisicion_y_Validacion.ipynb`, ejecutado y con outputs guardados.
+El notebook sigue 5 pasos:
+
+1. **Adquisición / carga** — si el archivo ya está en `data/raw/` se usa tal
+   cual; si no, se copia de `_data/` o se descarga; luego se lee a memoria con
+   `pandas` / `geopandas` detectando el encoding (`utf-8` / `latin-1`, `chardet`).
+2. **Limpieza y validación espacial** — estandariza texto de categorías
+   (`II-1`) y estados (`ACTIVO`); valida coordenadas (vacías/cero, signo de
+   hemisferio, intercambio lat/lon, fuera de Perú); marca duplicados y puntos
+   fuera de su polígono distrital. Todo se cuantifica en
+   `logs/quality_report.csv` (+ `quality_report.md`).
+3. **Filtrado de ámbito** — recorta oferta y demanda a los 3 departamentos de
+   `config.md`.
+4. **Almacenamiento** — GeoPackage en `data/processed/` (capa nacional + un
+   recorte por departamento).
+5. **Exploración con Folium** — un mapa interactivo por departamento en
+   `data/outputs/mapa_acceso_<depto>.html`.
 
 `_data/` (provisto para el curso) contiene una copia de las 4 fuentes:
 `RENIPRESS_30-04-2026.csv`, `CP_P.shp` (centros poblados), `DEPARTAMENTO.gpkg`
