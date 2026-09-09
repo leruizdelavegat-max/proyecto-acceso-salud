@@ -61,10 +61,11 @@ _CONTEO_HDR = ("poblacion", "población", "evaluados", "marcados",
 
 def _tex(df: pd.DataFrame, nombre: str, caption: str, label: str,
          float_format="%.1f", ancho: bool = False, na: str = "--"):
-    """Escribe una tabla .tex como float [H] (cada cuadro donde se lo escribe),
-    en \\small, con encabezados en español. Los conteos van con separador de
-    miles; las tasas, con un decimal; los faltantes, como ``--``. `ancho`
-    ajusta el cuadro a \\textwidth con \\resizebox."""
+    """Escribe una tabla .tex como float [H] (queda donde se la escribe), en
+    \\small, con encabezados en español y una fila separada de la siguiente.
+    Los conteos van con separador de miles; las tasas, con un decimal; los
+    faltantes, como ``--``. `ancho` ajusta el cuadro a \\textwidth con
+    \\resizebox."""
     import re
     d = _p("report/tables")
     d.mkdir(parents=True, exist_ok=True)
@@ -95,6 +96,12 @@ def _tex(df: pd.DataFrame, nombre: str, caption: str, label: str,
     raw = x.to_latex(index=False, escape=False, column_format=col_fmt)
     m = re.search(r"\\begin\{tabular\}.*?\\end\{tabular\}", raw, re.S)
     tabular = m.group(0) if m else raw
+    # separar visualmente cada fila de datos (aire entre filas, como pidio la revision)
+    mm = re.search(r"\\midrule\n(.*?)\n\\bottomrule", tabular, re.S)
+    if mm:
+        filas = [ln for ln in mm.group(1).split("\n") if ln.strip()]
+        nuevo = "\n\\addlinespace[2.5pt]\n".join(filas)
+        tabular = tabular[:mm.start(1)] + nuevo + tabular[mm.end(1):]
     cuerpo = f"\\resizebox{{\\textwidth}}{{!}}{{%\n{tabular}}}" if ancho else tabular
     s = ("\\begin{table}[H]\n\\centering\n\\small\n"
          f"\\caption{{{caption}}}\n\\label{{{label}}}\n{cuerpo}\n\\end{{table}}\n")
