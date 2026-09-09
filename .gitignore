@@ -22,3 +22,13 @@ __pycache__/
 .pytest_cache/
 .venv/
 .DS_Store
+
+# LaTeX — auxiliares (se conservan main.tex y main.pdf)
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/tables/*.aux

@@ -396,14 +396,15 @@ _HW_POR_PERFIL = {"car": _HW_CAR, "bike": _HW_BIKE, "foot": _HW_FOOT}
 
 
 def _grafo_desde_pbf(pbf_path: Path, bbox: tuple, perfil: str, rcfg: dict):
-    """Arma el grafo NetworkX del perfil a partir de la caché de vías del .pbf
-    (`_leer_vias_pbf`, un solo escaneo). Se recorta al `bbox` (área combinada
-    de los 3 deptos): solo entran vías con >= 2 vértices dentro.
+    """Arma el grafo NetworkX del perfil a partir de la caché de vías del .pbf.
+    Recorta al `bbox` (vías con >= 1 vértice dentro).
 
-    Los nodos del grafo se identifican por su coordenada redondeada a 7
-    decimales (~1 cm): así los extremos compartidos entre vías coinciden y la
-    red queda conexa."""
+    **Simplifica al construir**: solo se crean nodos en cruces (coordenada
+    usada por >= 2 vías o >= 2 veces) y en extremos de vía; los puntos-forma
+    intermedios solo acumulan longitud. Así nunca se materializa el grafo de
+    ~6 M de nodos crudos — clave con 8 GB de RAM."""
     import networkx as nx
+    from collections import Counter
 
     admitidos = _HW_POR_PERFIL[perfil]
     respeta_oneway = (perfil == "car")
@@ -411,39 +412,48 @@ def _grafo_desde_pbf(pbf_path: Path, bbox: tuple, perfil: str, rcfg: dict):
     t0 = time.time()
     vias = _leer_vias_pbf(pbf_path, bbox)
 
-    def _nid(x, y):
-        return (round(x, 7), round(y, 7))
+    def _nid(p):
+        return (round(p[0], 7), round(p[1], 7))
+
+    def _en_bbox(c):
+        return any(minx <= x <= maxx and miny <= y <= maxy for x, y in c)
+
+    relevantes = [(v[0], v[1], v[2], v[3], v[4]) for v in vias
+                  if v[1] in admitidos and _en_bbox(v[0])]
+
+    # cuántas veces aparece cada coordenada -> cruce si >= 2
+    uso = Counter()
+    for coords, *_ in relevantes:
+        for p in coords:
+            uso[_nid(p)] += 1
 
     G = nx.MultiDiGraph()
     G.graph["crs"] = "epsg:4326"
-    for coords, hw, ms, oneway_tag, junction in vias:
-        if hw not in admitidos:
-            continue
-        if not any(minx <= x <= maxx and miny <= y <= maxy for x, y in coords):
-            continue
+    for coords, hw, ms, oneway_tag, junction in relevantes:
         oneway = respeta_oneway and (oneway_tag in ("yes", "true", "1")
                                      or junction == "roundabout"
                                      or hw in ("motorway", "motorway_link"))
         seq = list(reversed(coords)) if (respeta_oneway and oneway_tag == "-1") else coords
+        ini = _nid(seq[0])
+        acc = 0.0
         for (ax, ay), (bx, by) in zip(seq, seq[1:]):
-            a, b = _nid(ax, ay), _nid(bx, by)
-            if a == b:
-                continue
-            L = haversine_m(ax, ay, bx, by)
-            G.add_edge(a, b, length=float(L), highway=hw, maxspeed=ms)
-            if not oneway:
-                G.add_edge(b, a, length=float(L), highway=hw, maxspeed=ms)
-    for (x, y) in list(G.nodes):
-        G.nodes[(x, y)]["x"] = float(x)
-        G.nodes[(x, y)]["y"] = float(y)
+            acc += haversine_m(ax, ay, bx, by)
+            nb = _nid((bx, by))
+            # cerrar segmento en cruces, extremos de vía, o el último punto
+            if uso[nb] >= 2 or nb == _nid(seq[-1]):
+                if nb != ini and acc > 0:
+                    G.add_edge(ini, nb, length=acc, highway=hw, maxspeed=ms)
+                    if not oneway:
+                        G.add_edge(nb, ini, length=acc, highway=hw, maxspeed=ms)
+                ini, acc = nb, 0.0
 
-    if G.number_of_nodes():   # componente débilmente conexa mayor (≈ retain_all=False)
+    for n in G.nodes:
+        G.nodes[n]["x"], G.nodes[n]["y"] = float(n[0]), float(n[1])
+    if G.number_of_nodes():
         G = G.subgraph(max(nx.weakly_connected_components(G), key=len)).copy()
-    n0, e0 = G.number_of_nodes(), G.number_of_edges()
-    _simplificar_grafo(G)     # colapsa los nodos-forma (grado 2) -> ~5-10x menos nodos
     _aplicar_velocidades(G, perfil, rcfg)
-    log.info("  grafo %s: %d->%d nodos, %d->%d aristas (%.0fs)",
-             perfil, n0, G.number_of_nodes(), e0, G.number_of_edges(), time.time() - t0)
+    log.info("  grafo %s: %d nodos, %d aristas (%.0fs)",
+             perfil, G.number_of_nodes(), G.number_of_edges(), time.time() - t0)
     return G
 
 
@@ -587,15 +597,44 @@ def resumen_snapping(snap_df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ===========================================================================
-# Ruteo sobre el grafo
+# Ruteo sobre el grafo — matrices con scipy.sparse.csgraph (mucho más rápido
+# que Dijkstra de NetworkX: una llamada en C para todas las fuentes).
 # ===========================================================================
-def tiempos_desde_instalacion(G, GR, nodo_inst) -> tuple[dict, dict]:
-    """(dur_s, dist_m) desde CUALQUIER nodo hasta `nodo_inst`, calculado como
-    Dijkstra desde `nodo_inst` sobre el grafo invertido GR."""
-    import networkx as nx
-    dur = nx.single_source_dijkstra_path_length(GR, nodo_inst, weight="travel_time")
-    dist = nx.single_source_dijkstra_path_length(GR, nodo_inst, weight="length")
-    return dur, dist
+def _csr(G, nodos: list, peso: str):
+    """Matriz de adyacencia dispersa (u->v) con el `peso` dado. Entre aristas
+    paralelas se queda con la MENOR (no la suma)."""
+    from scipy.sparse import csr_matrix
+    idx = {n: i for i, n in enumerate(nodos)}
+    mejor: dict = {}
+    for u, v, d in G.edges(data=True):
+        k = (idx[u], idx[v])
+        w = float(d[peso])
+        if k not in mejor or w < mejor[k]:
+            mejor[k] = w
+    n = len(nodos)
+    if not mejor:
+        return csr_matrix((n, n)), idx
+    rc = np.fromiter((r for r, _ in mejor), dtype=np.int64, count=len(mejor))
+    cc = np.fromiter((c for _, c in mejor), dtype=np.int64, count=len(mejor))
+    dd = np.fromiter(mejor.values(), dtype=np.float64, count=len(mejor))
+    return csr_matrix((dd, (rc, cc)), shape=(n, n)), idx
+
+
+def _dist_a_instalaciones(G, nodos, fac_nodos, peso, min_only=False):
+    """Distancia (`peso`) desde CADA nodo del grafo HASTA cada nodo de
+    `fac_nodos` (se rutea sobre el grafo invertido). Si `min_only`, devuelve
+    (dist_por_nodo, fuente_por_nodo). Si no, matriz (len(fac), n_nodos)."""
+    from scipy.sparse.csgraph import dijkstra
+    M, idx = _csr(G, nodos, peso)
+    Minv = M.T.tocsr()                       # aristas invertidas: v->u
+    fac_idx = [idx[n] for n in fac_nodos]
+    if min_only:
+        # min_only=True + return_predecessors=True -> (dist, pred, sources);
+        # sources[nodo] = índice (en fac_idx) de la instalación más cercana.
+        dist, _pred, sources = dijkstra(Minv, directed=True, indices=fac_idx,
+                                        min_only=True, return_predecessors=True)
+        return (dist, sources), idx
+    return dijkstra(Minv, directed=True, indices=fac_idx), idx
 
 
 def matriz_departamento(cfg: dict, nombre_depto: str, perfil: str,
@@ -603,77 +642,83 @@ def matriz_departamento(cfg: dict, nombre_depto: str, perfil: str,
                         forzar: bool, bbox: tuple | None = None
                         ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Devuelve (matriz_long, snap_df) para un departamento y perfil.
-    - perfil en `matriz_completa_perfiles`: todos los pares origen x (resolutivos+I-3+I-4)
-    - otros perfiles: solo el resolutivo más cercano por origen (multi-source Dijkstra)
-    `bbox` (área combinada de los 3 deptos): si se pasa, el .pbf se lee 1 sola vez.
+    - perfil en `matriz_completa_perfiles`: TODOS los pares origen x (resolutivos+I-3+I-4)
+    - otros perfiles: solo el resolutivo más cercano por origen
     """
-    import networkx as nx
     rcfg = cfg["routing"]
     umbral = float(rcfg.get("snap_umbral_m", 1500))
     cats_matriz = set(rcfg["categorias_matriz"])
     completa = perfil in rcfg.get("matriz_completa_perfiles", ["car"])
-    buffer_km = float(rcfg["grafo"].get("buffer_km", 30))
+    buffer_km = float(rcfg["grafo"].get("buffer_km", 20))
 
     of = oferta_dep.copy()
-    of["cod_ipress"] = of["COD_IPRESS"].to_numpy()
+    of["cod_ipress"] = of["COD_IPRESS"].astype(str).to_numpy()
     destinos = of[of["categoria_norm"].isin(cats_matriz) | of["resolutiva"].astype(bool)].copy()
     resol = of[of["resolutiva"].astype(bool)].copy()
 
     if bbox is None:
         bbox = tuple(area_de_interes([muestra_dep, destinos], buffer_km).bounds)
     G = construir_o_cargar_grafo(cfg, nombre_depto, perfil, forzar, bbox=bbox)
-    GR = G.reverse(copy=False)
 
-    dem = pd.DataFrame({"cod_ccpp": muestra_dep["CODCP"].to_numpy(),
+    dem = pd.DataFrame({"cod_ccpp": muestra_dep["CODCP"].astype(str).to_numpy(),
                         "lon": muestra_dep.geometry.x.to_numpy(),
                         "lat": muestra_dep.geometry.y.to_numpy()})
     dst = pd.DataFrame({"cod_ipress": destinos["cod_ipress"].to_numpy(),
                         "lon": destinos.geometry.x.to_numpy(),
-                        "lat": destinos.geometry.y.to_numpy(),
-                        "resolutiva": destinos["resolutiva"].astype(bool).to_numpy()})
+                        "lat": destinos.geometry.y.to_numpy()})
 
     snap_dem, nodo_dem = snap_nodos(G, dem, "cod_ccpp", perfil, umbral)
     snap_dst, nodo_dst = snap_nodos(G, dst, "cod_ipress", perfil, umbral)
     snap_dem["tipo"] = "demanda"
     snap_dst["tipo"] = "oferta"
 
-    filas = []
-    t0 = time.time()
-    if completa:
-        for j, row in enumerate(dst.itertuples(index=False), 1):
-            dur, dist = tiempos_desde_instalacion(G, GR, nodo_dst[row.cod_ipress])
-            for cod, nd in nodo_dem.items():
-                filas.append((cod, row.cod_ipress, perfil,
-                              dur.get(nd, np.nan), dist.get(nd, np.nan)))
-            if j % 25 == 0 or j == len(dst):
-                log.info("    %s/%s matriz completa %d/%d instalaciones (%.0fs)",
-                         nombre_depto, perfil, j, len(dst), time.time() - t0)
-    else:
-        # solo el resolutivo más cercano: Dijkstra multi-fuente desde los nodos resolutivos
-        r_nodes = {nodo_dst[c] for c in resol["COD_IPRESS"].to_numpy() if c in nodo_dst}
-        dur = nx.multi_source_dijkstra_path_length(GR, r_nodes, weight="travel_time")
-        dist = nx.multi_source_dijkstra_path_length(GR, r_nodes, weight="length")
-        # ¿a qué resolutivo? el más cercano nodo a nodo (aprox): recomputo por instalación
-        # (son pocos resolutivos) para poder reportar cuál.
-        por_inst = {}
-        for c in resol["COD_IPRESS"].to_numpy():
-            if c in nodo_dst:
-                por_inst[c] = nx.single_source_dijkstra_path_length(GR, nodo_dst[c], weight="travel_time")
-        for cod, nd in nodo_dem.items():
-            mejor_c, mejor_t = pd.NA, np.inf
-            for c, dmap in por_inst.items():
-                t = dmap.get(nd, np.inf)
-                if t < mejor_t:
-                    mejor_t, mejor_c = t, c
-            filas.append((cod, mejor_c if np.isfinite(mejor_t) else pd.NA, perfil,
-                          dur.get(nd, np.nan), dist.get(nd, np.nan)))
-        log.info("    %s/%s nearest-resolutivo (%d resolutivos, %.0fs)",
-                 nombre_depto, perfil, len(por_inst), time.time() - t0)
+    # Un punto que engancha a > `umbral` de la red NO tiene acceso por carretera:
+    # se marca como no-ruteable (NaN), NUNCA se rutea desde un nodo lejano.
+    dem_ok = dict(zip(snap_dem["id"], snap_dem["snap_ok"]))
+    dst_ok = dict(zip(snap_dst["id"], snap_dst["snap_ok"]))
 
-    matriz = pd.DataFrame(filas, columns=_COLS_MATRIZ)
+    nodos = list(G.nodes)
+    t0 = time.time()
+
+    if completa:
+        fac_nodos = [nodo_dst[c] for c in dst["cod_ipress"]]
+        Dt, idx = _dist_a_instalaciones(G, nodos, fac_nodos, "travel_time")   # (n_fac, n_nodos)
+        Dl, _ = _dist_a_instalaciones(G, nodos, fac_nodos, "length")
+        cols = np.array([idx[nodo_dem[c]] for c in dem["cod_ccpp"]])          # columna por origen
+        n_c, n_f = len(dem), len(dst)
+        dur = Dt[:, cols].T.astype(float)     # (n_c, n_f) segundos
+        dis = Dl[:, cols].T.astype(float)
+        mask_ok = (np.array([dem_ok[c] for c in dem["cod_ccpp"]])[:, None]
+                   & np.array([dst_ok[c] for c in dst["cod_ipress"]])[None, :])
+        dur = np.where(np.isfinite(dur) & mask_ok, dur, np.nan).ravel()
+        dis = np.where(np.isfinite(dis) & mask_ok, dis, np.nan).ravel()
+        matriz = pd.DataFrame({
+            "cod_ccpp": np.repeat(dem["cod_ccpp"].to_numpy(), n_f),
+            "cod_ipress": np.tile(dst["cod_ipress"].to_numpy(), n_c),
+            "profile": perfil, "duration_s": dur, "distance_m": dis})
+        log.info("    %s/%s matriz completa %d origenes x %d instalaciones (%.0fs)",
+                 nombre_depto, perfil, n_c, n_f, time.time() - t0)
+    else:
+        r_cods = [c for c in resol["cod_ipress"] if c in nodo_dst and dst_ok.get(c)]
+        r_nodos = [nodo_dst[c] for c in r_cods]
+        (dist_t, src), idx = _dist_a_instalaciones(G, nodos, r_nodos, "travel_time", min_only=True)
+        # sources[nodo] = índice de NODO de la instalación más cercana -> a cod_ipress
+        nodo_int_a_cod = {idx[n]: c for n, c in zip(r_nodos, r_cods)}
+        cols = np.array([idx[nodo_dem[c]] for c in dem["cod_ccpp"]])
+        dur = dist_t[cols].astype(float)
+        okc = np.array([dem_ok[c] for c in dem["cod_ccpp"]])
+        dur = np.where(np.isfinite(dur) & okc, dur, np.nan)
+        cod_cercano = [nodo_int_a_cod.get(int(si), pd.NA) if okc[k] and si >= 0 else pd.NA
+                       for k, si in enumerate(src[cols])]
+        matriz = pd.DataFrame({
+            "cod_ccpp": dem["cod_ccpp"].to_numpy(), "cod_ipress": cod_cercano,
+            "profile": perfil, "duration_s": dur, "distance_m": np.nan})
+        log.info("    %s/%s nearest-resolutivo (%d resolutivos, %.0fs)",
+                 nombre_depto, perfil, len(r_cods), time.time() - t0)
+
     snap_df = pd.concat([snap_dem, snap_dst], ignore_index=True)
     snap_df["departamento"] = nombre_depto
-    return matriz, snap_df
+    return matriz[_COLS_MATRIZ], snap_df
 
 
 # ===========================================================================

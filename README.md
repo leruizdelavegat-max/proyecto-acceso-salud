@@ -11,10 +11,12 @@ de Perú: costero, andino y amazónico (ver `config.md`).
 - `Fase1_Adquisicion_y_Validacion.ipynb` — Fase 1: descarga, limpieza/validación, recorte por departamento (RENIPRESS, SIGMED, límites administrativos) y mapas interactivos Folium (demanda vs. oferta resolutiva)
 - `src/routing.py` — Fase 2: grafo OSM por departamento (OSMnx), snapping, muestreo, matriz de tiempos (NetworkX) y caché
 - `tests/test_routing.py` — pruebas de las funciones puras de la Fase 2 (sin red)
-- `src/metrics.py` — Fase 3: cálculo de métricas de acceso
-- `src/export.py` — tablas y figuras para el informe
-- `app.py` — Fase 4: dashboard Streamlit
-- `report/main.tex` — informe final en LaTeX
+- `src/poblacion.py` — Fase 3 (insumo): población por centro poblado (raster WorldPop)
+- `src/metrics.py` — Fase 3: métricas de acceso (funciones DataFrame→DataFrame)
+- `src/export.py` — Fase 5: figuras (`report/figures/`), tablas (`report/tables/`) y cifras del informe
+- `app.py` — Fase 4: dashboard Streamlit (lee solo archivos precalculados)
+- `report/main.tex` / `report/main.pdf` — informe final en LaTeX (fuente + compilado)
+- `tests/` — pruebas de las funciones puras (`pytest -q tests/`)
 - `_data/` — data provista para el curso (nunca se modifica; ver más abajo)
 - `data/raw/` — datos crudos (copiados de `_data/` o descargados; no se modifican)
 - `data/processed/` — datos limpios y validados (GeoPackage)
@@ -147,11 +149,33 @@ lógica en el dashboard):
 
 Tablas LaTeX en `report/tables/*.tex` (generadas, no escritas a mano).
 
-## Cómo correr el dashboard
+## Cómo correr el dashboard (Fase 4)
 
 ```bash
 streamlit run app.py
 ```
+
+Lee **solo** archivos precalculados (`data/outputs/*.parquet`, `*.csv`,
+`data/processed/*.gpkg`, `logs/quality_report.csv`) — no rutea ni construye
+grafos. Vistas: KPIs · mapa coroplético de acceso por distrito + capa de
+establecimientos filtrable por categoría e institución · ECDF del tiempo de
+acceso (urbano/rural o por depto) · tabla de distritos con descarga CSV ·
+**simulador de escenario** (subir establecimientos I-3/I-4 a resolutivos y
+ver la ganancia de cobertura, usando la matriz de la Fase 2) · panel de
+calidad de datos de la Fase 1.
+
+## Cómo generar el informe (Fase 5)
+
+```bash
+python src/export.py            # figuras (report/figures/*.pdf) + tablas
+                                # (report/tables/*.tex) + cifras (_numeros.tex)
+cd report && pdflatex main.tex && pdflatex main.tex
+```
+
+`report/main.tex` se rellena solo desde `report/tables/_numeros.tex` (cifras)
+y `\input`/`\includegraphics` de las tablas y figuras generadas por el
+pipeline — ninguna es captura del dashboard. El PDF compilado
+(`report/main.pdf`) se commitea junto con el fuente.
 
 ## Datos declarados
 

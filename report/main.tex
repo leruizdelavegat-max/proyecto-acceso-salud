@@ -1,0 +1,302 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[main=spanish,provide=*]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+% Insumos generados por src/export.py; si aun no existen, se compila igual.
+\newcommand{\inputsihay}[1]{\IfFileExists{#1}{\input{#1}}{%
+  \begin{center}\itshape[Tabla pendiente: correr python src/export.py]\end{center}}}
+\newcommand{\figsihay}[3][0.8\linewidth]{\IfFileExists{figures/#2.pdf}{%
+  \begin{figure}[H]\centering\includegraphics[width=#1]{#2.pdf}%
+  \caption{#3}\label{fig:#2}\end{figure}}{%
+  \begin{center}\itshape[Figura pendiente: correr python src/export.py]\end{center}}}
+
+% --- Cifras: src/export.py escribe tables/_numeros.tex con \newcommand.
+%     Si aun no existe, se usan estos \providecommand como respaldo. ---
+\IfFileExists{tables/_numeros.tex}{\input{tables/_numeros.tex}}{%
+  \providecommand{\umbralOro}{60}%
+  \providecommand{\nCentrosPoblados}{5\,000}%
+  \providecommand{\poblacionTotal}{3\,174\,254}%
+  \providecommand{\pctCubierta}{--}%
+  \providecommand{\pctSinRuta}{--}%
+  \providecommand{\poblacionSinRuta}{--}%
+  \providecommand{\medianaAcceso}{--}%
+  \providecommand{\giniTotal}{--}%
+  \providecommand{\spearmanAltitud}{--}%
+  \providecommand{\peorDistrito}{--}%
+  \providecommand{\factorRodeo}{--}%
+  \providecommand{\fraccionMuestra}{29}%
+}
+% factorRodeo puede faltar aunque _numeros.tex exista (si la figura no se generó)
+\providecommand{\factorRodeo}{--}
+
+\title{\textbf{La hora dorada}\\[2mm]
+\large Tiempo de acceso por carretera a establecimientos de salud
+resolutivos en Piura, Ayacucho y Ucayali}
+\author{Proyecto integrador --- Data Science con Python}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Se estima el tiempo de viaje por carretera desde \nCentrosPoblados{} centros
+poblados (muestra estratificada por distrito, $\approx\fraccionMuestra\%$ del
+total) hasta el establecimiento de salud con capacidad resolutiva
+(categoria \mbox{II-1} o superior, operativo) mas cercano, en Piura (costa),
+Ayacucho (sierra) y Ucayali (Amazonia). El ruteo usa la red vial de
+OpenStreetMap y la poblacion se pondera con WorldPop 2020. De
+\poblacionTotal{} habitantes analizados, el \pctCubierta\% esta a
+$\le\umbralOro$~min por auto de un establecimiento resolutivo; el
+\pctSinRuta\% (\poblacionSinRuta{} hab.) vive en centros poblados sin
+ninguna ruta por carretera al conjunto resolutivo y queda marcado como tal,
+sin imputarle distancia en linea recta. La mediana del tiempo de acceso es
+\medianaAcceso~min. La desigualdad del acceso, medida con el coeficiente de
+Gini ponderado por poblacion, es \giniTotal. El peor distrito es
+\peorDistrito. El contraste geografico es marcado: la Amazonia depende del
+transporte fluvial, no vial, y esa es la brecha estructural que ningun
+promedio distrital sin ponderar deja ver.
+\end{abstract}
+
+\section{Introduccion y planteamiento del problema}
+
+En medicina de urgencias, la \emph{hora de oro} es la ventana en la que un
+traumatismo grave o una emergencia obstetrica deben llegar a un centro capaz
+de resolverlos. En el Peru, un puesto de salud (categoria \mbox{I-1}) puede
+estabilizar a un paciente pero no operar ni hacer una cesarea: solo los
+establecimientos de categoria \mbox{II-1} en adelante tienen esa capacidad
+resolutiva.
+
+La pregunta de este trabajo es: \textbf{cuanto tarda \emph{realmente} la
+poblacion de una region, por carretera, en llegar a un establecimiento con
+capacidad resolutiva, y donde estan las peores brechas?} La palabra
+``realmente'' es la dificil. Una linea recta en un mapa no es una carretera;
+un establecimiento del registro puede estar cerrado; una coordenada puede
+tener el signo del hemisferio cambiado. El valor del analisis esta en el
+tratamiento de esos problemas.
+
+El alcance son tres departamentos con geografias deliberadamente distintas
+---Piura (costa), Ayacucho (sierra) y Ucayali (Amazonia)--- declarados en
+\texttt{config.md} y modificables sin tocar el codigo.
+
+\section{Fuentes de datos}
+
+\begin{table}[H]
+\centering
+\caption{Fuentes utilizadas, con fecha de acceso y limitaciones conocidas.}
+\label{tab:fuentes}
+\small
+\begin{tabular}{@{}p{2.4cm}p{3.1cm}p{2.3cm}p{6.1cm}@{}}
+\toprule
+Fuente & Contenido & Acceso / licencia & Limitaciones conocidas \\
+\midrule
+RENIPRESS / SUSALUD & Registro nacional de IPRESS (oferta) &
+CSV mensual, snapshot 2026-04-30; datos abiertos &
+Categorias sin normalizar; $\sim$37\% sin coordenada; ``operativo'' no
+garantiza personal ni insumos. \\
+SIGMED / MINEDU & Centros poblados con coordenadas (demanda) &
+Descarga espacial, shapefile; uso educativo &
+No trae poblacion; incluye centros poblados sin via de acceso. \\
+OpenStreetMap (Geofabrik, extracto Peru) & Red vial &
+\texttt{peru-latest.osm.pbf}, 2026-09-07; ODbL &
+Cobertura vial sesgada: densa en ciudades, escasa en zona rural y amazonica. \\
+INEI --- cartografia censal & Limites distrito / provincia / departamento &
+GeoPackage; uso oficial & Precision del poligono variable en zonas remotas. \\
+WorldPop 2020 (1\,km, UN-ajustado) & Poblacion por celda &
+GeoTIFF; CC-BY 4.0; DOI:10.5258/SOTON/WP00685 &
+Resolucion 1\,km; modelo, no censo; se recorta al poligono departamental. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Metodologia}
+
+\subsection{Definicion de capacidad resolutiva}
+Un establecimiento se considera \textbf{resolutivo} si y solo si (i)~su
+estado operativo es \texttt{ACTIVO} y (ii)~su categoria normalizada esta en
+\{\mbox{II-1}, \mbox{II-2}, \mbox{II-E}, \mbox{III-1}, \mbox{III-2},
+\mbox{III-E}\}. Las categorias \mbox{I-1} a \mbox{I-4} se conservan en el
+conjunto de datos pero se excluyen del calculo del mas cercano. La
+normalizacion de \texttt{CATEGORIA} (regex romano+sufijo, con o sin guion;
+vacio / ``0'' / ``S/C'' $\to$ desconocida) esta a la vista en
+\texttt{Fase1\_Adquisicion\_y\_Validacion.ipynb}.
+
+\subsection{Capa de validacion}
+Cada regla registra cuantos registros marco, que se hizo y por que
+(\texttt{logs/quality\_report.csv}). Se detectan y tratan: coordenadas
+faltantes / nulas o en cero (eliminadas), \textbf{signo de hemisferio
+invertido} (corregido si el valor negativo cae en el \emph{bounding box}
+del Peru), \textbf{intercambio lat/lon} (corregido si
+$(\mathrm{lon},\mathrm{lat})$ cae dentro y $(\mathrm{lat},\mathrm{lon})$ no),
+fuera del \emph{bounding box} del Peru (eliminadas), codigos duplicados
+(se conserva la primera aparicion), puntos fuera de su poligono distrital
+(conservados con advertencia, volcados a un CSV) y problemas de codificacion
+UTF-8 / latin-1 (mojibake revertido). Eliminar filas en silencio se
+considero un enfoque fallido; toda eliminacion tiene una regla justificada
+y registrada.
+
+\subsection{Ruteo}
+Se construye un grafo \textbf{NetworkX} a partir del \texttt{.pbf} local con
+\texttt{pyosmium} y se rutea con Dijkstra vectorizado
+(\texttt{scipy.sparse.csgraph}). Se descarto OSRM en Docker porque la BIOS
+del equipo tiene la virtualizacion deshabilitada y bloqueada por el area de
+TI (WSL2 / Docker no arrancan); se descarto \texttt{pyrosm} porque no
+compila en Python~3.14; y se descarto OSMnx / Overpass porque el servidor
+publico estaba inalcanzable el dia de la corrida. Esta ultima es, en si
+misma, una observacion sobre el estado de las herramientas de datos
+abiertos peruanas.
+
+Parametros: perfiles \texttt{car} (velocidad por tipo de via OSM, con
+\texttt{maxspeed} cuando existe), \texttt{bike} (15~km/h) y \texttt{foot}
+(4{,}5~km/h). Los puntos se enganchan al nodo mas cercano del grafo; un
+punto a mas de 1\,500~m de una via se marca \textbf{sin acceso por
+carretera} y \emph{no} se rutea desde un nodo lejano. No se usa distancia en
+linea recta como sustituto. La matriz completa origen~$\times$~instalacion
+(resolutivos $+$ \mbox{I-3} / \mbox{I-4}) se calcula para el perfil
+\texttt{car} y se cachea en Parquet para el simulador de la Fase~4.
+
+\subsection{Muestreo}
+Los 17\,187 centros poblados de los tres departamentos exceden el tope de
+5\,000, asi que se muestrea de forma \textbf{estratificada por distrito}
+(asignacion proporcional con reparto de restos mayores; semilla fija). Al no
+haber poblacion en SIGMED, la estratificacion es por distrito, no ponderada
+por poblacion; la implicacion de error muestral se discute en Limitaciones.
+
+\subsection{Definicion de las metricas}
+Todas se producen con funciones \texttt{DataFrame}$\to$\texttt{DataFrame} en
+\texttt{src/metrics.py}: (1)~$t_{\min}(i)$, minutos en auto al resolutivo mas
+cercano; (2)~bandas de cobertura $<$30 / 30--60 / 60--120 / $>$120~min y sin
+ruta; (3)~acceso medio \textbf{ponderado por poblacion} a nivel distrito,
+provincia y departamento (el promedio se toma sobre la poblacion con ruta);
+(4)~lista de brechas criticas; (5)~desigualdad mediante el coeficiente de
+\textbf{Gini} ponderado por poblacion y su curva de Lorenz ---se eligio Gini
+por ser un escalar acotado $[0,1]$, comparable entre departamentos y en el
+tiempo, y estandar en la literatura de equidad en el acceso---; (6)~contraste
+urbano / rural con la regla del INEI (urbano si $\ge 2\,000$~hab.\ o capital
+distrital). El cross-analisis combina acceso con \textbf{altitud}.
+
+\section{Resultados}
+
+\inputsihay{tables/acceso_departamento.tex}
+
+\figsihay[0.85\linewidth]{cobertura_bandas}{Cobertura poblacional por banda de
+tiempo de acceso en auto, por departamento. La Amazonia concentra la
+poblacion en la banda ``sin ruta''.}
+
+\inputsihay{tables/cobertura_bandas.tex}
+
+\figsihay[0.7\linewidth]{ecdf_urbano_rural}{Distribucion acumulada (ECDF) del
+tiempo de acceso, ponderada por poblacion, separada por clasificacion
+urbano / rural. La linea roja marca el umbral de \umbralOro~min.}
+
+\figsihay[0.5\linewidth]{lorenz}{Curva de Lorenz del tiempo de acceso
+ponderado por poblacion (Gini $=\giniTotal$). Cuanto mas se aleja de la
+diagonal, mas desigual es el acceso.}
+
+\inputsihay{tables/gini.tex}
+
+\figsihay[0.65\linewidth]{acceso_altitud}{Acceso medio ponderado por franja
+altitudinal. Correlacion de Spearman entre $t_{\min}$ y altitud:
+\spearmanAltitud.}
+
+\inputsihay{tables/brechas_criticas.tex}
+
+\section{Discusion}
+
+\subsection{Linea recta frente a red vial}
+La Figura~\ref{fig:recta_vs_red} compara, para cada centro poblado ruteable,
+la distancia en linea recta a su resolutivo mas cercano con la distancia
+real por carretera. El factor de rodeo mediano es \factorRodeo: usar la
+linea recta subestimaria sistematicamente el tiempo de acceso, y de forma no
+uniforme ---el rodeo es mayor en la sierra, donde la carretera contornea el
+relieve. Por eso los puntos sin ruta se dejan como sin ruta y no se les
+asigna una recta con factor.
+
+\figsihay[0.55\linewidth]{recta_vs_red}{Distancia por carretera vs.\
+distancia en linea recta al establecimiento resolutivo mas cercano (perfil
+auto). La recta roja es el factor de rodeo mediano.}
+
+\subsection{El contraste que importa}
+Piura (costa) y Ucayali (Amazonia) no se comportan igual y no deberian. En
+Piura la red vial es densa y el acceso esta gobernado por la distancia a las
+pocas ciudades con hospital \mbox{II-1}. En Ucayali la mayoria de la
+poblacion vive en centros poblados ribereños sin via de acceso: el
+transporte real es fluvial, y un analisis vial ---como este--- lo refleja
+marcando esa poblacion como sin ruta por carretera. Ayacucho es un caso
+intermedio donde el rodeo por relieve, no la ausencia de vias, es el factor
+dominante. Un promedio distrital sin ponderar ocultaria esto, porque trata
+un caserio de 12 personas igual que una ciudad de 12\,000; la ponderacion
+por poblacion lo hace visible.
+
+\section{Limitaciones}
+
+\begin{itemize}
+\item \textbf{Tasa de error del registro.} El $\sim$37\% de RENIPRESS sin
+coordenada y el $\sim$13\% con categoria no reconocible se excluyen del
+calculo; si esos establecimientos no son aleatorios (p.\,ej.\ mas frecuentes
+en zonas remotas), la cobertura esta sobreestimada.
+\item \textbf{Sesgo de cobertura de OSM.} La red vial rural y amazonica de
+OSM esta incompleta. Algunos centros poblados marcados ``sin ruta'' podrian
+tener una trocha no mapeada; otros, una via mapeada que en la practica es
+intransitable. El resultado es una cota, no una medicion exacta.
+\item \textbf{``Operativo'' $\ne$ ``resolutivo en la practica''.} Que un
+establecimiento figure como \mbox{II-1} activo no garantiza que tenga
+cirujano, anestesiologo, banco de sangre ni quirofano disponible esa noche.
+\item \textbf{Sin ambulancias ni referencia.} El modelo asume que el
+paciente se traslada por sus medios; no modela disponibilidad de ambulancia
+ni el sistema de referencia.
+\item \textbf{Muestreo.} Se rutea el $\approx\fraccionMuestra\%$ de los
+centros poblados, estratificado por distrito y no por poblacion: distritos
+con muchos caserios pequeños quedan sub-representados frente a un diseño
+poblacional. Las cifras de cobertura son estimaciones con error de muestreo.
+\item \textbf{Poblacion modelada.} WorldPop es un modelo a 1\,km, no un
+censo; se recorta al poligono departamental para que el total cuadre con el
+censo, pero la distribucion fina dentro del distrito es aproximada.
+\item \textbf{Velocidades supuestas.} Las velocidades por tipo de via son
+valores de referencia; no consideran estado del asfalto, epoca de lluvias
+ni congestion.
+\end{itemize}
+
+\section{Conclusiones y recomendaciones}
+
+\begin{enumerate}
+\item El acceso resolutivo en los tres departamentos es fuertemente
+desigual (Gini $=\giniTotal$) y esa desigualdad es \emph{geografica}: la
+Amazonia no tiene un problema de tiempo de viaje, tiene un problema de
+\emph{modo} de transporte. Recomendacion: para Ucayali, evaluar capacidad
+resolutiva fluvial (lanchas-ambulancia, telemedicina en puestos ribereños),
+no nuevas carreteras.
+\item En Ayacucho, donde el factor limitante es el rodeo por relieve,
+mejoras marginales de via (asfaltado, puentes) si reducen el tiempo de
+acceso; el simulador de la Fase~4 permite priorizar que establecimiento
+\mbox{I-3} / \mbox{I-4} ascender para maximizar poblacion cubierta.
+\item El distrito con peor acceso ponderado (\peorDistrito) deberia
+encabezar cualquier plan de inversion.
+\item Antes de decidir, sanear RENIPRESS: el 37\% sin coordenada es el mayor
+factor de incertidumbre de todo el analisis.
+\end{enumerate}
+
+\section*{Referencias}
+\begin{itemize}
+\item SUSALUD. Registro Nacional de IPRESS (RENIPRESS).
+\url{https://www.datosabiertos.gob.pe/dataset/registro-nacional-de-entidades-prestadoras-de-servicios-de-salud-renipress}
+\item MINEDU. Descarga espacial SIGMED. \url{https://sigmed.minedu.gob.pe/descargas/}
+\item OpenStreetMap contributors / Geofabrik. Peru extract.
+\url{https://download.geofabrik.de/south-america/peru-latest.osm.pbf}
+\item INEI. Cartografia censal (limites politico-administrativos).
+\item WorldPop (2020). Global High Resolution Population Denominators
+Project, Peru, UN-adjusted. DOI:10.5258/SOTON/WP00685.
+\item Hagberg, A. et al. NetworkX. \url{https://networkx.org}
+\end{itemize}
+
+\end{document}
