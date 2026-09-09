@@ -1,26 +1,29 @@
-\begin{table}
-\caption{Informe de calidad de datos de la Fase 1: registros marcados por regla.}
+\begin{table}[H]
+\centering
+\small
+\caption{Informe de calidad de datos de la Fase~1: registros evaluados y marcados por regla (motivo completo en \texttt{logs/quality\_report.csv}).}
 \label{tab:calidad}
-\begin{tabular}{lrrrr}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}
 \toprule
-dataset & regla & registros\_marcados & porcentaje & accion \\
+Conjunto & Regla de validación & Evaluados & Marcados & \% & Acción \\
 \midrule
-renipress & encoding archivo & 0 & 0.0 & leído como utf-8-sig \\
-renipress & encoding texto utf8 vs latin1 & 4 & 0.0 & corregido \\
-renipress & coordenadas recuperadas por ubigeo & 13154 & 100.0 & corregido (centroide del distrito declarado) — tasa de recuperación 100.0\% \\
-renipress & coordenadas vacias o no numericas & 0 & 0.0 & eliminado \\
-renipress & coordenadas en cero & 0 & 0.0 & eliminado \\
-renipress & signo de hemisferio invertido & 0 & 0.0 & corregido \\
-renipress & coordenadas lat lon intercambiadas & 0 & 0.0 & corregido \\
-renipress & coordenadas fuera de peru & 0 & 0.0 & eliminado \\
-renipress & codigos duplicados & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
-renipress & categoria no reconocida & 8504 & 24.0 & conservado con advertencia \\
-renipress & punto fuera de su poligono distrital & 1683 & 4.7 & conservado con advertencia \\
-centros poblados & geometria vacia & 0 & 0.0 & eliminado \\
-centros poblados & coordenadas fuera de peru & 0 & 0.0 & eliminado \\
-centros poblados & encoding texto utf8 vs latin1 & 0 & 0.0 & sin problemas \\
-centros poblados & codigos duplicados & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
-centros poblados & punto fuera de su poligono distrital & 811 & 0.5 & conservado con advertencia \\
+renipress & encoding archivo & 1 & 0 & 0.0 & leído como utf-8-sig \\
+renipress & encoding texto utf8 vs latin1 & 35\,471 & 4 & 0.0 & corregido \\
+renipress & coordenadas recuperadas por ubigeo & 13\,154 & 13\,154 & 100.0 & corregido (centroide del distrito declarado) — tasa\dots \\
+renipress & coordenadas vacias o no numericas & 35\,471 & 0 & 0.0 & eliminado \\
+renipress & coordenadas en cero & 35\,471 & 0 & 0.0 & eliminado \\
+renipress & signo de hemisferio invertido & 35\,471 & 0 & 0.0 & corregido \\
+renipress & coordenadas lat lon intercambiadas & 35\,471 & 0 & 0.0 & corregido \\
+renipress & coordenadas fuera de peru & 35\,471 & 0 & 0.0 & eliminado \\
+renipress & codigos duplicados & 35\,471 & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
+renipress & categoria no reconocida & 35\,471 & 8\,504 & 24.0 & conservado con advertencia \\
+renipress & punto fuera de su poligono distrital & 35\,471 & 1\,683 & 4.7 & conservado con advertencia \\
+centros poblados & geometria vacia & 153\,400 & 0 & 0.0 & eliminado \\
+centros poblados & coordenadas fuera de peru & 153\,400 & 0 & 0.0 & eliminado \\
+centros poblados & encoding texto utf8 vs latin1 & 153\,400 & 0 & 0.0 & sin problemas \\
+centros poblados & codigos duplicados & 153\,400 & 0 & 0.0 & eliminado (se conserva la 1ª aparición) \\
+centros poblados & punto fuera de su poligono distrital & 153\,400 & 811 & 0.5 & conservado con advertencia \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}

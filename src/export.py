@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Fase 5 (insumo) — Figuras y números para el informe LaTeX.
 
@@ -39,15 +39,65 @@ def _fig(fig, nombre: str):
     print(f"  figura -> report/figures/{nombre}.pdf")
 
 
-def _tex(df: pd.DataFrame, nombre: str, caption: str, label: str, float_format="%.1f"):
+_COLNAMES = {
+    "dataset": "Conjunto", "regla": "Regla de validación", "registros_evaluados": "Evaluados",
+    "registros_marcados": "Marcados", "porcentaje": r"\%", "accion": "Acción", "motivo": "Motivo",
+    "departamento": "Departamento", "poblacion": "Población", "poblacion_ruteable": "Población con ruta",
+    "acceso_min_ponderado": "Acceso medio (min)", "pct_sin_ruta": r"\% sin ruta",
+    "n_centros_poblados": "Centros poblados", "nombre_distrito": "Distrito", "provincia": "Provincia",
+    "nombre_provincia": "Provincia", "rank": r"N.\textsuperscript{o}", "ubigeo_distrito": "UBIGEO",
+    "banda": "Banda de tiempo", "share_pct": r"\% de población", "poblacion_total_grupo": "Población del grupo",
+    "ambito": "Ámbito", "gini_acceso": "Gini del acceso", "urbano_rural": "Ámbito",
+    "franja_altitud": "Franja altitudinal", "altitud_media_m": "Altitud media (m)",
+    "pct_pob_<= 60min": r"\% pob. $\le$ 60 min",
+}
+_BANDA_ES = {"0-30": r"$\le$ 30", "30-60": "30--60", "60-120": "60--120", ">120": "$>$ 120",
+             "sin_ruta": "Sin ruta"}
+
+
+_CONTEO_HDR = ("poblacion", "población", "evaluados", "marcados",
+               "centros poblados", "con ruta")
+
+
+def _tex(df: pd.DataFrame, nombre: str, caption: str, label: str,
+         float_format="%.1f", ancho: bool = False, na: str = "--"):
+    """Escribe una tabla .tex como float [H] (cada cuadro donde se lo escribe),
+    en \\small, con encabezados en español. Los conteos van con separador de
+    miles; las tasas, con un decimal; los faltantes, como ``--``. `ancho`
+    ajusta el cuadro a \\textwidth con \\resizebox."""
+    import re
     d = _p("report/tables")
     d.mkdir(parents=True, exist_ok=True)
-    try:
-        s = df.to_latex(index=False, escape=True, float_format=float_format,
-                        caption=caption, label=label, longtable=False,
-                        column_format="l" + "r" * (df.shape[1] - 1))
-    except TypeError:
-        s = df.to_latex(index=False)
+    x = df.rename(columns=lambda c: _COLNAMES.get(str(c), _BANDA_ES.get(str(c),
+                  str(c).replace("_", " ").capitalize()))).copy()
+
+    def _fmt(serie):
+        if not pd.api.types.is_numeric_dtype(serie):
+            return serie.astype("object").where(serie.notna(), na).astype(str)
+        nm = str(serie.name).lower()
+        no_nulos = serie.dropna()
+        es_conteo = any(k in nm for k in _CONTEO_HDR)
+        es_entero = es_conteo or (len(no_nulos) and (no_nulos % 1 == 0).all())
+        vals = []
+        for v in serie:
+            if pd.isna(v):
+                vals.append(na)
+            elif es_entero:
+                vals.append(f"{v:,.0f}".replace(",", "\\,"))
+            else:
+                vals.append(float_format % v)
+        return pd.Series(vals, index=serie.index)
+
+    for c in x.columns:
+        x[c] = _fmt(x[c])
+
+    col_fmt = "l" + "r" * (x.shape[1] - 1)
+    raw = x.to_latex(index=False, escape=False, column_format=col_fmt)
+    m = re.search(r"\\begin\{tabular\}.*?\\end\{tabular\}", raw, re.S)
+    tabular = m.group(0) if m else raw
+    cuerpo = f"\\resizebox{{\\textwidth}}{{!}}{{%\n{tabular}}}" if ancho else tabular
+    s = ("\\begin{table}[H]\n\\centering\n\\small\n"
+         f"\\caption{{{caption}}}\n\\label{{{label}}}\n{cuerpo}\n\\end{{table}}\n")
     (d / f"{nombre}.tex").write_text(s, encoding="utf-8")
     print(f"  tabla  -> report/tables/{nombre}.tex")
 
@@ -164,39 +214,59 @@ def run() -> dict:
         print(f"  (fig recta_vs_red omitida: {e})")
 
     # ---- Tablas .tex ----
-    _tex(cob_dep.pivot_table(index="departamento", columns="banda", values="share_pct",
-                             observed=True).fillna(0).round(1).reset_index(),
-         "cobertura_bandas", "Cobertura poblacional (\\%) por banda de tiempo de acceso en auto.",
+    _cob = (cob_dep.pivot_table(index="departamento", columns="banda", values="share_pct",
+                                observed=True).fillna(0).round(1).reset_index())
+    _cob["departamento"] = _cob["departamento"].str.title()
+    _tex(_cob, "cobertura_bandas",
+         "Cobertura poblacional (\\%) por banda de tiempo de acceso en auto.",
          "tab:cobertura")
-    _tex(acc_dep[["departamento", "poblacion", "poblacion_ruteable",
-                  "pct_sin_ruta", "acceso_min_ponderado"]].round(1),
-         "acceso_departamento", "Acceso medio ponderado por población, por departamento.",
-         "tab:acceso-dep")
-    _tex(brechas[["rank", "nombre_distrito", "poblacion", "pct_sin_ruta",
-                  "acceso_min_ponderado"]].head(15),
-         "brechas_criticas", "Los 15 distritos con peor acceso ponderado por población.",
+    _accd = acc_dep[["departamento", "poblacion", "poblacion_ruteable",
+                     "pct_sin_ruta", "acceso_min_ponderado"]].round(1).copy()
+    _accd["departamento"] = _accd["departamento"].str.title()
+    _tex(_accd, "acceso_departamento",
+         "Acceso medio ponderado por población, por departamento.", "tab:acceso-dep")
+    brz = brechas[["rank", "nombre_distrito", "poblacion", "pct_sin_ruta",
+                   "acceso_min_ponderado"]].head(15).copy()
+    brz["nombre_distrito"] = brz["nombre_distrito"].str.title()
+    _tex(brz, "brechas_criticas",
+         "Los 15 distritos con peor acceso ponderado por población al establecimiento resolutivo.",
          "tab:brechas")
-    _tex(gini.round(3), "gini", "Coeficiente de Gini del tiempo de acceso ponderado por población.",
-         "tab:gini")
+    _gini = gini.round(3).copy()
+    if "ambito" in _gini.columns:
+        _gini["ambito"] = _gini["ambito"].str.replace("departamentos", "deptos.").str.title()
+    _tex(_gini, "gini", "Coeficiente de Gini del tiempo de acceso ponderado por población.",
+         "tab:gini", float_format="%.3f")
 
     # contraste urbano/rural
     try:
         ur = pd.read_csv(out / "contraste_urbano_rural.csv")
+        ur["departamento"] = ur["departamento"].str.title()
         _tex(ur.round(1), "urbano_rural",
-             "Acceso y cobertura por clasificación urbano/rural (regla INEI) y departamento.",
-             "tab:urbano-rural")
+             "Acceso y cobertura por clasificación urbano/rural (regla INEI: $\\ge$ 2\\,000 hab. "
+             "o capital) y departamento.",
+             "tab:urbano-rural", ancho=True)
     except Exception:
         pass
 
-    # informe de calidad de datos de la Fase 1
+    # informe de calidad de datos de la Fase 1 (sin la columna "motivo": es
+    # texto largo y el detalle esta en logs/quality_report.csv; la prosa del
+    # informe explica cada regla)
     try:
         q = pd.read_csv(_p("logs/quality_report.csv"))
-        qs = q[["dataset", "regla", "registros_marcados", "porcentaje", "accion"]].copy()
+        qs = q[["dataset", "regla", "registros_evaluados", "registros_marcados",
+                "porcentaje", "accion"]].copy()
         qs["regla"] = qs["regla"].str.replace("_", " ", regex=False)
         qs["dataset"] = qs["dataset"].str.replace("_", " ", regex=False)
+        def _corta(s, n=52):
+            s = str(s)
+            if len(s) <= n:
+                return s
+            return s[:n].rsplit(" ", 1)[0] + "\\dots"
+        qs["accion"] = qs["accion"].map(_corta)
         _tex(qs, "calidad_datos",
-             "Informe de calidad de datos de la Fase 1: registros marcados por regla.",
-             "tab:calidad")
+             "Informe de calidad de datos de la Fase~1: registros evaluados y marcados por regla "
+             "(motivo completo en \\texttt{logs/quality\\_report.csv}).",
+             "tab:calidad", ancho=True)
     except Exception as e:
         print(f"  (tabla calidad_datos omitida: {e})")
 
