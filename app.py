@@ -32,11 +32,12 @@ st.set_page_config(page_title="La hora dorada", page_icon="🏥", layout="wide")
 # --------------------------------------------------------------------------
 # Paleta institucional y tipografía
 # --------------------------------------------------------------------------
-AZUL = "#1f3a5f"          # títulos / acento
-GRANATE = "#7c1d2b"       # establecimientos resolutivos, líneas de referencia
-GRIS = "#9aa5b1"          # establecimientos no resolutivos
-ORO = "#c99a2e"           # ubicación recuperada / aproximada
-ESCALA_ACCESO = ["#fef0d9", "#fdcc8a", "#fc8d59", "#e34a33", "#a30f1c"]  # sec. tiempo (más = peor)
+AZUL = "#1f3a5f"          # títulos / acento (tipografía y tema)
+# --- colores del MAPA: se mantienen los originales (previos al rediseño) ---
+GRANATE = "#d00000"       # establecimientos resolutivos + línea de umbral
+GRIS = "#8d99ae"          # establecimientos no resolutivos
+ORO = "#c99a2e"           # ubicación recuperada / aproximada (borde)
+ESCALA_ACCESO = ["#1a9850", "#fee08b", "#d73027", "#7f0000"]   # acceso: verde=bueno -> granate=malo
 
 st.markdown(f"""
 <style>
