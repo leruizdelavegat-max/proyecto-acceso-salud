@@ -1,5 +1,5 @@
 # Informe de Calidad de Datos — Fase 1
-Generado: 2026-09-09T13:12:51+00:00
+Generado: 2026-09-10T07:06:25+00:00
 
 | Dataset | Regla | Evaluados | Marcados | % | Acción | Motivo |
 |---|---|---:|---:|---:|---|---|
