@@ -23,6 +23,10 @@ __pycache__/
 .venv/
 .DS_Store
 
+# Config del editor y material de clase del profesor (no son entregables)
+.vscode/
+referencias/
+
 # LaTeX — auxiliares (se conservan main.tex y main.pdf)
 report/*.aux
 report/*.log
